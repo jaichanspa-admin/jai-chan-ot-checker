@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jai Chan OT Checker — ระบบช่วยทำฟอร์มเบิกค่าล่วงเวลา</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f4f1ea; --panel:#ffffff; --ink:#1f2421; --muted:#6b7280;
+  --line:#d9d4c7; --accent:#7a5c3e; --accent2:#a8865f; --ok:#2f7d5b;
+  --warn:#c0392b; --chip:#efe9dc; --old:#b8860b;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",Tahoma,"Sarabun",sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+h1,h2,h3{margin:0}
+.wrap{max-width:1150px;margin:0 auto;padding:18px}
+header.app{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 0;border-bottom:2px solid var(--accent)}
+header.app .logo{width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px}
+header.app h1{font-size:20px}
+header.app .sub{color:var(--muted);font-size:13px}
+.nav{margin-left:auto;display:flex;gap:8px}
+.nav button{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+.nav button.on{background:var(--accent);color:#fff}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin:16px 0;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.panel h2{font-size:16px;margin-bottom:10px;color:var(--accent);display:flex;align-items:center;gap:8px}
+.step{display:inline-flex;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;align-items:center;justify-content:center;font-size:13px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+label.fld{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+input,select,button,textarea{font-family:inherit;font-size:14px}
+input,select,textarea{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+button{cursor:pointer;border:none;border-radius:8px;padding:9px 16px;background:var(--accent);color:#fff;font-weight:600}
+button.ghost{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+button.sm{padding:5px 10px;font-size:13px}
+button.danger{background:var(--warn)}
+button:hover{opacity:.92}
+.uploads{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.drop{border:2px dashed var(--accent2);border-radius:12px;padding:18px;text-align:center;color:var(--muted);background:#fbf8f1;cursor:pointer}
+.drop.drag{background:#f0e8d8;border-color:var(--accent)}
+.drop.done{border-style:solid;border-color:var(--ok);background:#f1f7f3}
+.hint{color:var(--muted);font-size:13px;line-height:1.5}
+.chip{background:var(--chip);border-radius:20px;padding:3px 12px;font-size:13px;display:inline-flex;gap:6px;align-items:center}
+.people{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.pbtn{background:var(--chip);color:var(--ink);font-weight:600;border:1px solid var(--line)}
+.pbtn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pbtn.old{border-color:var(--old);box-shadow:inset 0 0 0 1px var(--old)}
+.pbtn .n{opacity:.7;font-weight:400;margin-left:4px;font-size:12px}
+.badge-old{background:var(--old);color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px}
+table.edit{width:100%;border-collapse:collapse;margin-top:8px;font-size:13.5px}
+table.edit th,table.edit td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+table.edit th{background:var(--chip);font-size:12.5px;color:var(--ink)}
+table.edit td input,table.edit td textarea{width:100%;border:1px solid transparent;background:transparent;padding:4px 6px}
+table.edit td input:focus,table.edit td textarea:focus{border-color:var(--accent2);background:#fff}
+table.edit td.ot input{width:60px;text-align:center;font-weight:700;border:1px solid var(--line);background:#fff}
+table.edit td.dt{white-space:nowrap;width:60px}
+table.edit td.tm{white-space:nowrap;width:128px}
+table.edit td.sh{white-space:nowrap;width:96px}
+table.edit textarea{resize:vertical;min-height:30px;line-height:1.35}
+.otcalc{font-size:11px;color:var(--muted);text-align:center;margin-top:2px}
+.muted{color:var(--muted)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.totbox{font-size:15px;font-weight:700}
+.totbox b{color:var(--accent);font-size:18px}
+.tag{font-size:11px;padding:1px 7px;border-radius:10px;background:#eee;color:#555}
+.tag.auto{background:#e6f0ea;color:var(--ok)}
+.tag.man{background:#f4e6e0;color:var(--warn)}
+.tag.add{background:#fdf3d8;color:var(--old)}
+details.help{margin-top:10px}
+details.help summary{cursor:pointer;color:var(--accent);font-size:13px}
+.empty{padding:30px;text-align:center;color:var(--muted)}
+.maptbl input,.maptbl select{font-size:13px}
+.le{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--old);white-space:nowrap}
+/* dashboard */
+#dash{display:none}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:8px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+.card .k{font-size:12px;color:var(--muted)}
+.card .v{font-size:24px;font-weight:700;color:var(--accent);margin-top:4px}
+.bar{height:18px;background:var(--accent);border-radius:4px;min-width:2px}
+.bartxt{font-size:12px;color:var(--muted)}
+table.dash{width:100%;border-collapse:collapse;font-size:13.5px}
+table.dash th,table.dash td{border-bottom:1px solid var(--line);padding:7px 9px;text-align:left}
+table.dash th{color:var(--muted);font-size:12.5px}
+table.dash td.num{text-align:right;font-variant-numeric:tabular-nums}
+
+/* ---------- PRINTABLE FORM ---------- */
+#forms{display:none}
+.sheet{background:#fff;color:#000;font-family:"Sarabun","Segoe UI",Tahoma,sans-serif}
+.sheet .title{text-align:center;font-size:22px;font-weight:700;letter-spacing:1px;margin-bottom:14px;text-decoration:underline}
+.sheet .meta{display:flex;justify-content:space-between;gap:20px;font-size:15px;margin-bottom:10px}
+.sheet .meta .v{border-bottom:1px dotted #000;min-width:150px;display:inline-block;padding:0 6px;font-weight:600}
+.sheet .period{font-size:14px;color:#333;margin-bottom:6px}
+.sheet table.form{width:100%;border-collapse:collapse}
+.sheet table.form th,.sheet table.form td{border:1px solid #000;padding:5px 7px;font-size:13.5px}
+.sheet table.form th{background:#f0ece2;text-align:center;font-weight:700}
+.sheet table.form td.c{text-align:center;white-space:nowrap}
+.sheet table.form td.desc{font-size:13px}
+.sheet .sumrow td{font-weight:700;text-align:right}
+.sheet .sumrow td.hh{text-align:center}
+.sheet .sign{display:flex;justify-content:space-around;margin-top:30px;font-size:14px;text-align:center;gap:20px}
+.sheet .sign .line{border-bottom:1px dotted #000;width:150px;display:inline-block;margin:0 6px}
+.sheet .ack{margin-top:16px;font-size:12.5px;color:#333;border-top:1px dashed #999;padding-top:8px}
+
+@media print{
+  body{background:#fff}
+  .wrap, header.app{display:none !important}
+  #forms{display:block !important}
+  .sheet{page-break-after:always;padding:14mm 12mm;width:210mm;min-height:297mm}
+  .sheet:last-child{page-break-after:auto}
+  @page{size:A4;margin:0}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="app">
+    <div class="logo">JC</div>
+    <div>
+      <h1>Jai Chan · ระบบช่วยทำฟอร์มเบิกค่าล่วงเวลา (OT)</h1>
+      <div class="sub">อัปโหลดรายงาน POS + ไฟล์กะ → ดึงบริการรอบสุดท้าย/กะ คำนวณ OT → ตรวจ → ปริ้น A4 · เก็บประวัติคุมค่าใช้จ่าย</div>
+    </div>
+    <div class="nav">
+      <button id="navForm" class="on" onclick="showView('form')">ทำฟอร์ม</button>
+      <button id="navDash" onclick="showView('dash')">📊 Dashboard</button>
+    </div>
+  </header>
+
+  <div id="form">
+  <!-- STEP 1 -->
+  <div class="panel">
+    <h2><span class="step">1</span> อัปโหลดไฟล์</h2>
+    <div class="uploads">
+      <div>
+        <div id="dropPos" class="drop">
+          <div style="font-size:26px">📄</div>
+          <div><b>รายงาน POS (.xlsx)</b></div>
+          <div class="hint">ลาก/คลิก — ดึงบริการรอบสุดท้ายของวันแต่ละคน</div>
+          <input id="filePos" type="file" accept=".xlsx,.xls" style="display:none">
+        </div>
+        <div id="infoPos" class="hint" style="margin-top:6px"></div>
+      </div>
+      <div>
+        <div id="dropShift" class="drop">
+          <div style="font-size:26px">🗓️</div>
+          <div><b>ไฟล์กะ (.xlsx)</b> <span class="muted">— แทน Google Sheet roster</span></div>
+          <div class="hint">เช่น “กะ ใจฉัน 1-15 มิถุนายน 2569.xlsx”</div>
+          <input id="fileShift" type="file" accept=".xlsx,.xls" style="display:none">
+        </div>
+        <div id="infoShift" class="hint" style="margin-top:6px"></div>
+      </div>
+      <div>
+        <div id="dropEmp" class="drop">
+          <div style="font-size:26px">👤</div>
+          <div><b>รายชื่อพนักงาน</b> <span class="muted">(ตัวเลือก)</span></div>
+          <div class="hint">CSV/Excel — จับคู่ชื่อเล่น↔รหัส + เติมชื่อเต็ม/ตำแหน่งอัตโนมัติ</div>
+          <input id="fileEmp" type="file" accept=".csv,.xlsx,.xls" style="display:none">
+        </div>
+        <div id="infoEmp" class="hint" style="margin-top:6px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="panel" id="cfgPanel" style="display:none">
+    <h2><span class="step">2</span> ตั้งค่ารอบจ่าย · กฎ OT · จับคู่ชื่อ</h2>
+    <div class="row">
+      <label class="fld">เดือน<input type="month" id="month"></label>
+      <label class="fld">รอบจ่าย
+        <select id="half">
+          <option value="1">รอบที่ 1 (1–15)</option>
+          <option value="2">รอบที่ 2 (16–สิ้นเดือน)</option>
+        </select>
+      </label>
+      <label class="fld">การปัดเศษ OT
+        <select id="round">
+          <option value="floor">ตัดลงทุก 30 นาที</option>
+          <option value="nearest">ปัดใกล้สุด 30 นาที</option>
+        </select>
+      </label>
+      <label class="fld">ตำแหน่ง<input id="position" value="Therapist" style="width:130px"></label>
+      <label class="fld">อัตรา OT (บาท/ชม.)<input id="rate" type="number" min="0" step="1" placeholder="เช่น 60" style="width:120px"></label>
+    </div>
+    <details class="help" id="mapWrap">
+      <summary>จับคู่ชื่อในระบบ POS ↔ พนักงานในไฟล์กะ (ทำครั้งเดียว ระบบจำให้)</summary>
+      <div class="hint" style="margin:8px 0">ชื่อใน POS เป็นชื่อเล่น เลือกว่าตรงกับพนักงานคนไหนในไฟล์กะ เพื่อดึงกะรายวันมาอัตโนมัติ · <span style="color:var(--old)">⬤</span> = พนักงานชุดเก่า (OT อัตโนมัติวันละ 1 ชม.)</div>
+      <table class="edit maptbl" id="mapTbl"><thead><tr><th>ชื่อใน POS</th><th>= พนักงานในไฟล์กะ</th></tr></thead><tbody></tbody></table>
+    </details>
+    <div class="people" id="people"></div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="panel" id="editPanel" style="display:none">
+    <h2><span class="step">3</span> ตรวจ/แก้ไขฟอร์ม — <span id="curName" style="color:var(--ink)"></span></h2>
+    <div class="hint">แต่ละบรรทัด = บริการ <b>รอบสุดท้ายของวัน</b> · <span class="tag auto">auto</span> จาก POS · <span class="tag add">กะ</span> วันทำงานจากไฟล์กะ · ช่อง OT มี <b>เลขคำนวณให้แล้ว</b> (แก้ทับได้)</div>
+    <div id="oldNote" class="hint" style="color:var(--old);display:none">⬤ พนักงานชุดเก่า: ทุกวันทำงานได้ OT ขั้นต่ำ 1 ชม. แม้ไม่มีงานนวด — ติ๊ก “ขอกลับก่อน” ถ้าพนักงานขอกลับเอง (จะไม่ได้ OT ขั้นต่ำ)</div>
+    <div class="toolbar">
+      <button class="sm ghost" id="addRow">＋ เพิ่มบรรทัด</button>
+      <button class="sm ghost" id="recalc">↻ คำนวณ OT ใหม่</button>
+      <span style="flex:1"></span>
+      <span class="totbox">รวม OT: <b id="totHrs">0</b> ชม. <span class="muted" id="totBaht"></span></span>
+    </div>
+    <div style="overflow-x:auto">
+    <table class="edit"><thead><tr>
+      <th class="dt">วันที่</th>
+      <th>อธิบายงานที่ทำล่วงเวลา (บริการรอบสุดท้าย)</th>
+      <th class="tm">เวลา</th>
+      <th class="sh">กะ</th>
+      <th style="width:90px">OT (ชม.)</th>
+      <th style="width:40px"></th>
+    </tr></thead><tbody id="rows"></tbody></table>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="panel" id="printPanel" style="display:none">
+    <h2><span class="step">4</span> ปริ้น / บันทึกประวัติ</h2>
+    <div class="row">
+      <button id="printOne">🖨️ ปริ้นคนนี้ (A4)</button>
+      <button class="ghost" id="printAll">🖨️ ปริ้นทุกคนในรอบ</button>
+      <button class="ghost" id="saveHist">💾 บันทึกรอบนี้เข้าประวัติ (ทุกคน)</button>
+      <span class="hint" style="flex:1">บันทึกแล้วดูสรุปค่าใช้จ่ายได้ที่แท็บ Dashboard · ผจก. เทียบกับเครื่องสแกนนิ้วก่อนเซ็น</span>
+    </div>
+    <div id="saveMsg" class="hint" style="margin-top:8px;color:var(--ok)"></div>
+  </div>
+  </div><!-- /form -->
+
+  <!-- DASHBOARD -->
+  <div id="dash">
+    <div class="panel">
+      <h2>📊 Dashboard ค่าใช้จ่าย OT</h2>
+      <div class="hint">สรุปจากรอบที่ “บันทึกเข้าประวัติ” แล้ว · เก็บในเครื่องนี้ (localStorage)</div>
+      <div class="cards" id="dashCards" style="margin-top:12px"></div>
+      <div class="row" style="margin:6px 0 14px">
+        <label class="fld">กรองเดือน<select id="dashFilter"><option value="">ทุกเดือน</option></select></label>
+        <span style="flex:1"></span>
+        <button class="sm danger" id="clearHist">ล้างประวัติทั้งหมด</button>
+      </div>
+      <h3 style="font-size:14px;color:var(--accent);margin:10px 0 6px">OT ต่อพนักงาน</h3>
+      <div id="dashByEmp"></div>
+      <h3 style="font-size:14px;color:var(--accent);margin:18px 0 6px">สรุปรายรอบ</h3>
+      <table class="dash" id="dashByPeriod"><thead><tr><th>รอบจ่าย</th><th>จำนวนคน</th><th class="num">รวม OT (ชม.)</th><th class="num">ค่าใช้จ่าย (บาท)</th><th>บันทึกเมื่อ</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <div class="hint" style="text-align:center;margin:20px 0;color:var(--muted)">
+    ทำงานในเครื่องทั้งหมด (ไม่ส่งข้อมูลออกเซิร์ฟเวอร์) · ไฟล์เดียวจบ · ใช้แทน repo <b>jai-chan-ot-checker</b> ได้เลย
+  </div>
+</div>
+
+<div id="forms"></div>
+
+<script>
+const THAI_MONTHS=["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+const THAI_ABBR=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+// พนักงานชุดเก่า: รหัส (OT อัตโนมัติวันละ 1 ชม.)
+const OLD_IDS=["680602","680603","680606","680609","680613"];
+function isOldId(id){return OLD_IDS.includes(String(id));}
+// ฐานข้อมูลพนักงานในตัว: รหัส -> {ชื่อเล่น, ชื่อเต็ม, ตำแหน่ง}
+const ROSTER={
+"680602":{nick:"ฝน",name:"น.ส.น้ำฝน เทศจันทร์",position:"Therapist"},
+"680603":{nick:"นิกกี้",name:"น.ส.นิรภัฎ สกุลปรียากร",position:"Therapist"},
+"680605":{nick:"ดรีม",name:"น.ส.อรจิรา จิระศิริโสภณ",position:"Franchise Manager"},
+"680606":{nick:"น้อย",name:"น.ส.พิธานันท์ ลันทูล",position:"Therapist"},
+"680607":{nick:"ไก่",name:"น.ส.มิวิดา รอบจังหวัด",position:"Therapist"},
+"680609":{nick:"น้ำหอม",name:"น.ส.กัณญาวีร์ โทขุนทด",position:"Therapist"},
+"680610":{nick:"แอ๋ม",name:"น.ส.ณัฏฐณิชชา โชติชวาลไพศาล",position:"Therapist"},
+"680611":{nick:"แจน",name:"น.ส.จิดาภา ทองประเสริฐ",position:"Marketing Manager"},
+"680613":{nick:"สุ่ย",name:"น.ส.ลักษิกา ศรีสงคราม",position:"Therapist"},
+"680614":{nick:"กุ๊กไก่",name:"น.ส.ปาริฉัตร กันรัมย์",position:"Therapist"},
+"680617":{nick:"หมิง",name:"น.ส.ณัฐณิชา คณามิ่งมงคล",position:"Receptionist (Part Time)"},
+"680618":{nick:"น้ำตาล",name:"น.ส. ปภาวิชญ์ คณาสิทธิกุล",position:"Receptionist (Part Time)"},
+"680801":{nick:"บอส",name:"น.ส. บังอร ศรีสุพรรณ",position:"Therapist"},
+"680901":{nick:"เหมียว",name:"น.ส. ญาณภร ยติกุลเกษม",position:"Senior Spa Manager"},
+"681002":{nick:"แวว",name:"น.ส. สุภาวดี สุสันทัด",position:"Receptionist"},
+"681103":{nick:"เป้",name:"น.ส. ยุพเรศ โสมาเกตุ",position:"Receptionist"},
+"681104":{nick:"แนน",name:"NAN KYI KYI THAN",position:"Maid"},
+"6901005":{nick:"อาราเล่",name:"น.ส.ธณิกานต์ ฤทธิเดช",position:"Spa Manager"},
+"6902049":{nick:"แหม่ม",name:"น.ส. สุวรรณา เครือสง่าถาวร",position:"Maid"},
+"6902055":{nick:"โมจิ",name:"น.ส.วริศรา แซ่ตั้ง",position:"Therapist"},
+"6902057":{nick:"ยู",name:"น.ส.สุกัญญา ทัดระเบียบ",position:"Marketing Executive"},
+"690619":{nick:"ตุ๊กตา",name:"น.ส.ฉัตรชนก ลันทุนทด",position:"Therapist"},
+"690620":{nick:"น่าน",name:"น.ส. วราลี สนธิรักษ์",position:"Receptionist (Part Time)"},
+"690621":{nick:"แอนนี่",name:"น.ส.อังค์วรา ไกรนิธิวุฒิชูโชค",position:"Therapist (Part Time)"},
+"690622":{nick:"ติมมี่",name:"น.ส. วิทัศน์ปริยา จันทร์งาม",position:"Receptionist (Part Time)"},
+"690623":{nick:"กิ๊บ",name:"น.ส. นุชจรี ศรีสวาท",position:"Therapist (Part Time)"},
+"690624":{nick:"แคท",name:"น.ส. สิรภัทร สองครณ์",position:"Therapist (Part Time)"},
+"690625":{nick:"มิ้งค์",name:"น.ส. รวิตา สิทธิภณนภัทร",position:"Therapist (Part Time)"},
+"690626":{nick:"พอลลี่",name:"นาย ภูบดินทร์ ทองอ้ม",position:"Receptionist (Part Time)"},
+"690627":{nick:"วี",name:"น.ส. ปวีณา กุญชร",position:"Therapist"},
+"690628":{nick:"แป้ง",name:"น.ส. สุวัจนี คำศรี",position:"Therapist"},
+"690629":{nick:"แต้ว",name:"น.ส. วรางคณา เอี่ยมจิตต์",position:"Receptionist"},
+"690630":{nick:"ไค",name:"นาย กัลยากฤต รัตนยะนนท์",position:"Therapist"},
+"690631":{nick:"นิสา",name:"น.ส. ปาณิสา ยานะสอน",position:"Therapist"}
+};
+// เผื่อชื่อเล่นใน POS ต่างจากทะเบียน (แก้คู่ตายตัว)
+const ALIAS_FIX={"น้ำฝน":"680602","วีนา":"690627","มีนา":"6902055"};
+// พนักงานที่ไม่มี OT — ตัดออกจากระบบ
+const EXCLUDE_IDS=new Set(["690626","690622","6901005","6902049","680617"]);
+function normTH(s){return String(s||"").replace(/^(น\.ส\.|นาย|นาง)\s*/,"").replace(/[ัิ-ฺ็-๎\s]/g,"");}
+function lev(a,b){const m=a.length,n=b.length,d=[...Array(m+1)].map((_,i)=>[i,...Array(n).fill(0)]);for(let j=0;j<=n;j++)d[0][j]=j;
+  for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]==b[j-1]?0:1));return d[m][n];}
+function matchNick(nick){
+  if(ALIAS_FIX[nick]&&MASTER[ALIAS_FIX[nick]])return ALIAS_FIX[nick];
+  const ids=Object.keys(MASTER).filter(id=>!EXCLUDE_IDS.has(id));
+  let f=ids.find(id=>MASTER[id].nick===nick);if(f)return f;
+  const n=normTH(nick);if(!n)return null;
+  f=ids.find(id=>normTH(MASTER[id].nick)===n);if(f)return f;
+  f=ids.find(id=>{const nm=normTH(MASTER[id].name);return n.length>=2&&nm.includes(n);});if(f)return f;
+  f=ids.find(id=>{const m=normTH(MASTER[id].nick);return m&&Math.abs(m.length-n.length)<=1&&lev(m,n)<=1;});if(f)return f;
+  return null;
+}
+
+let RAW=[], DATA={};          // POS
+let CODEMAP={}, EMPS=[];      // shift file: code->[s,e], employees
+let MASTER=Object.fromEntries(Object.entries(ROSTER).map(([k,v])=>[k,{...v}])); // empId -> {nick,name,position}
+let MAP=load('jc_map',{});    // nickname -> empId
+let NAMES=load('jc_names',{});// empId -> fullName override
+let CUR=null, ROWS=[];
+
+const $=s=>document.querySelector(s);
+const el=(t,p={})=>Object.assign(document.createElement(t),p);
+function load(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+
+/* ---------- views ---------- */
+function showView(v){
+  $('#form').style.display=v==='form'?'':'none';
+  $('#dash').style.display=v==='dash'?'':'none';
+  $('#navForm').classList.toggle('on',v==='form');
+  $('#navDash').classList.toggle('on',v==='dash');
+  if(v==='dash')renderDash();
+}
+
+/* ---------- restore settings ---------- */
+$('#rate').value=load('jc_rate','')||'';
+$('#round').value=load('jc_round','floor');
+$('#rate').addEventListener('input',e=>{save('jc_rate',e.target.value);updateTotal();});
+$('#round').addEventListener('change',e=>{save('jc_round',e.target.value);if(CUR)buildRows();});
+
+/* ---------- drop wiring ---------- */
+function wireDrop(dropId,inputId,handler){
+  const d=$(dropId),f=$(inputId);
+  d.onclick=()=>f.click();
+  d.ondragover=e=>{e.preventDefault();d.classList.add('drag')};
+  d.ondragleave=()=>d.classList.remove('drag');
+  d.ondrop=e=>{e.preventDefault();d.classList.remove('drag');if(e.dataTransfer.files[0])handler(e.dataTransfer.files[0],d)};
+  f.onchange=e=>{if(e.target.files[0])handler(e.target.files[0],d)};
+}
+function readWb(f,cb,err){
+  const r=new FileReader();
+  r.onload=ev=>{try{cb(XLSX.read(new Uint8Array(ev.target.result),{type:'array'}))}catch(e){err&&err(e)}};
+  r.readAsArrayBuffer(f);
+}
+wireDrop('#dropPos','#filePos',(f,d)=>readWb(f,wb=>{parsePOS(wb,f.name);d.classList.add('done')},e=>$('#infoPos').innerHTML='<span style="color:var(--warn)">อ่านไม่ได้: '+e.message+'</span>'));
+wireDrop('#dropShift','#fileShift',(f,d)=>readWb(f,wb=>{parseShiftFile(wb,f.name);d.classList.add('done')},e=>$('#infoShift').innerHTML='<span style="color:var(--warn)">อ่านไม่ได้: '+e.message+'</span>'));
+wireDrop('#dropEmp','#fileEmp',(f,d)=>{
+  if(/\.csv$/i.test(f.name)){
+    const r=new FileReader();
+    r.onload=ev=>{const grid=parseCSV(decodeBuf(ev.target.result));parseEmpMaster(grid,f.name);d.classList.add('done');};
+    r.readAsArrayBuffer(f);
+  }else{
+    readWb(f,wb=>{const grid=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''}).map(r=>r.map(c=>String(c)));parseEmpMaster(grid,f.name);d.classList.add('done');},
+      e=>$('#infoEmp').innerHTML='<span style="color:var(--warn)">อ่านไม่ได้: '+e.message+'</span>');
+  }
+});
+function decodeBuf(buf){
+  const tries=['utf-8','utf-16le','utf-16be','windows-874'];let best='',bs=-1;
+  for(const enc of tries){try{
+    const s=new TextDecoder(enc,{fatal:false}).decode(buf);
+    const bad=(s.match(/�/g)||[]).length, thai=(s.match(/[฀-๿]/g)||[]).length;
+    const sc=thai-bad*5; if(sc>bs){bs=sc;best=s;}
+  }catch(e){}}
+  return best;
+}
+function parseCSV(text){
+  const out=[];let row=[],cur='',q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c=='"'){if(text[i+1]=='"'){cur+='"';i++;}else q=false;}else cur+=c;}
+    else{if(c=='"')q=true;else if(c==','){row.push(cur);cur='';}
+      else if(c=='\n'){row.push(cur);out.push(row);row=[];cur='';}
+      else if(c=='\r'){}else cur+=c;}
+  }
+  if(cur!==''||row.length){row.push(cur);out.push(row);}
+  return out;
+}
+function parseEmpMaster(grid,fname){
+  // find header row
+  let hi=grid.findIndex(r=>r.some(c=>/employee\s*id/i.test(c))&&r.some(c=>/nick/i.test(c)||/name/i.test(c)));
+  if(hi<0)hi=grid.findIndex(r=>r.some(c=>/employee\s*id/i.test(c)));
+  if(hi<0){$('#infoEmp').innerHTML='<span style="color:var(--warn)">ไม่พบหัวคอลัมน์ Employee ID</span>';return;}
+  const H=grid[hi].map(c=>String(c).trim().toLowerCase());
+  const find=(...keys)=>H.findIndex(h=>keys.some(k=>h.includes(k)));
+  const cId=find('employee id','employee_id','รหัส'),cNick=find('nick'),cName=H.findIndex(h=>h==='name'||h.includes('full name')||h==='ชื่อ'),
+        cPos=find('position','ตำแหน่ง'),cDept=find('department','แผนก');
+  let bad=0,tot=0;
+  grid.slice(hi+1).forEach(r=>{
+    const id=String(r[cId]||'').trim(); if(!/^\d+$/.test(id))return;
+    const nick=cNick>=0?String(r[cNick]||'').trim():'';
+    const name=cName>=0?String(r[cName]||'').trim():'';
+    const pos=cPos>=0?String(r[cPos]||'').trim():'';
+    tot++; if(isJunk(nick)&&isJunk(name)){bad++;return;} // ข้ามแถวที่ไทยเพี้ยน ใช้ฐานในตัวแทน
+    MASTER[id]={nick:isJunk(nick)?(MASTER[id]||{}).nick||'':nick,name:isJunk(name)?(MASTER[id]||{}).name||'':name,position:pos||(MASTER[id]||{}).position||''};
+  });
+  // pull readable names into NAMES + auto-map nicknames to POS
+  let mapped=0;
+  Object.entries(MASTER).forEach(([id,m])=>{ if(!isJunk(m.name))NAMES[id]=m.name; });
+  Object.keys(DATA).forEach(nick=>{const g=matchNick(nick);if(g){MAP[nick]=g;mapped++;}});
+  save('jc_names',NAMES);save('jc_map',MAP);
+  const warn=(bad>tot*0.5)?' <span style="color:var(--warn)">⚠ ภาษาไทยในไฟล์เพี้ยน (เป็น “?”) — ใช้ฐานข้อมูลในตัวแทนแล้ว ไม่ต้องอัปไฟล์นี้ก็ได้</span>':'';
+  $('#infoEmp').innerHTML='✅ <b>'+fname+'</b> · '+tot+' คน · จับคู่ชื่อเล่นอัตโนมัติ '+mapped+' คน'+warn;
+  ready();renderMap();renderPeople();if(CURP)buildRows();
+}
+function isJunk(s){s=String(s||'').trim();return !s||/^[?.\s]+$/.test(s);}
+function positionFor(id){return (id&&MASTER[id]&&!isJunk(MASTER[id].position))?MASTER[id].position:($('#position').value||'');}
+
+/* ---------- time helpers ---------- */
+function hm(t){
+  if(t==null||t==='')return null;
+  if(typeof t==='number')return Math.round(t*24*60);
+  const s=String(t).trim();
+  const m=s.match(/(\d{1,2})[:.](\d{2})/); if(m)return (+m[1])*60+(+m[2]);
+  const h=s.match(/^(\d{1,2})$/); if(h)return (+h[1])*60;
+  return null;
+}
+function toHM(min){if(min==null)return'';min=((min%1440)+1440)%1440;return String(Math.floor(min/60)).padStart(2,'0')+':'+String(min%60).padStart(2,'0');}
+function pmin(h,m){if(m==null||m==='')return (+h)*60;m=String(m);return (+h)*60+(m.length===1?(+m)*10:(+m));}
+function parseShiftCode(code){
+  if(!code)return null;
+  const c=String(code).trim();
+  if(CODEMAP[c])return CODEMAP[c];
+  const m=c.match(/[A-Za-z]*\s*(\d{1,2})(?:[.:](\d{1,2}))?\s*[-–]\s*(\d{1,2})(?:[.:](\d{1,2}))?/);
+  if(!m)return null;
+  return [pmin(m[1],m[2]),pmin(m[3],m[4])];
+}
+function isOff(code){const c=String(code||'').trim().toUpperCase();return c===''||c==='OFF'||c==='PH';}
+
+/* ---------- parse POS ---------- */
+function normDate(d){
+  if(d instanceof Date)return{day:d.getDate(),mon:d.getMonth()+1,year:d.getFullYear()};
+  const m=String(d).trim().match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  return m?{day:+m[1],mon:+m[2],year:+m[3]}:{day:null};
+}
+function parsePOS(wb,fname){
+  const sh=wb.SheetNames.find(n=>n.replace(/\s/g,'')==='ภาพรวม')||wb.SheetNames[0];
+  const arr=XLSX.utils.sheet_to_json(wb.Sheets[sh],{header:1,raw:true,defval:''});
+  const head=arr[0].map(h=>String(h).trim());
+  const col=n=>head.findIndex(h=>h===n);
+  const cD=col('วันที่'),cT=col('เวลา'),cI=col('รายการ'),cDur=col('เวลาบริการ'),cB=col('รหัสการจอง'),cE1=col('พนักงาน (1)'),cE2=col('พนักงาน (2)');
+  if(cD<0||cT<0||cI<0){$('#infoPos').innerHTML='<span style="color:var(--warn)">ไม่พบคอลัมน์ (วันที่/เวลา/รายการ)</span>';return;}
+  RAW=[];
+  for(let i=1;i<arr.length;i++){
+    const r=arr[i],dt=normDate(r[cD]); if(!dt.day)continue;
+    const start=hm(r[cT]),dur=parseInt(r[cDur])||0,item=String(r[cI]||'').trim(),book=String(r[cB]||'').trim();
+    [r[cE1],cE2>=0?r[cE2]:''].forEach(nm=>{nm=String(nm||'').trim();if(!nm||nm==='0')return;
+      RAW.push({name:nm,dt,start,end:start!=null?start+dur:null,item,book});});
+  }
+  DATA={};RAW.forEach(x=>{(DATA[x.name]=DATA[x.name]||[]).push(x);});
+  const months={};RAW.forEach(x=>{months[x.dt.year+'-'+String(x.dt.mon).padStart(2,'0')]=1;});
+  const mk=Object.keys(months).sort().pop(); if(mk&&!$('#month').value)$('#month').value=mk;
+  // auto-map POS nickname -> empId
+  Object.keys(DATA).forEach(nick=>{if(!MAP[nick]){const g=matchNick(nick);if(g)MAP[nick]=g;}});
+  save('jc_map',MAP);
+  $('#infoPos').innerHTML='✅ <b>'+fname+'</b> · '+RAW.length+' รายการ · '+Object.keys(DATA).length+' ชื่อ';
+  ready();
+}
+
+/* ---------- parse SHIFT FILE ---------- */
+function parseShiftFile(wb,fname){
+  CODEMAP={};EMPS=[];
+  const cs=wb.SheetNames.find(n=>n.indexOf('อธิบายรหัสกะ')>=0);
+  if(cs){
+    XLSX.utils.sheet_to_json(wb.Sheets[cs],{header:1,defval:''}).forEach(r=>{
+      const code=String(r[0]||'').trim();const hrs=parseShiftCode(code);
+      if(code&&hrs)CODEMAP[code]=hrs;
+    });
+  }
+  wb.SheetNames.forEach(sn=>{
+    const m=sn.match(/^(\d+)\s*-\s*(.+)$/); if(!m)return;
+    const id=m[1].trim(),eng=m[2].trim();
+    const arr=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:''});
+    const days={};
+    arr.slice(1).forEach(r=>{
+      const ds=String(r[1]||'').trim();const md=ds.match(/(\d{4})(\d{2})(\d{2})/);
+      if(!md)return;const key=(+md[1])+'-'+(+md[2])+'-'+(+md[3]);
+      days[key]=String(r[2]||'').trim();
+    });
+    EMPS.push({id,eng,sheet:sn,days});
+  });
+  // detect month from shift days if POS not loaded
+  if(!$('#month').value&&EMPS.length){
+    const k=Object.keys(EMPS[0].days)[0]; if(k){const[y,mo]=k.split('-');$('#month').value=y+'-'+String(mo).padStart(2,'0');}
+  }
+  $('#infoShift').innerHTML='✅ <b>'+fname+'</b> · พนักงาน '+EMPS.length+' คน · รหัสกะ '+Object.keys(CODEMAP).length;
+  ready();
+}
+
+function empById(id){return EMPS.find(e=>e.id===id);}
+function fullNameFor(id,eng){return (!isJunk(NAMES[id])?NAMES[id]:'')||(MASTER[id]&&!isJunk(MASTER[id].name)?MASTER[id].name:'')||eng||id;}
+function nickOf(id){return MASTER[id]&&!isJunk(MASTER[id].nick)?MASTER[id].nick:'';}
+// รายชื่อสำหรับ dropdown จับคู่ = รวมจากไฟล์กะ + ฐานข้อมูลในตัว
+function empUniverse(){
+  const ids=new Set([...EMPS.map(e=>e.id),...Object.keys(MASTER)]);
+  return [...ids].filter(id=>!EXCLUDE_IDS.has(id)).sort().map(id=>({id,label:fullNameFor(id,(empById(id)||{}).eng),nick:nickOf(id),old:isOldId(id),pos:(MASTER[id]||{}).position||''}));
+}
+
+/* ---------- ready / people ---------- */
+function ready(){
+  if(!RAW.length&&!EMPS.length)return;
+  $('#cfgPanel').style.display='';
+  renderMap();renderPeople();
+}
+
+function renderMap(){
+  const wrap=$('#mapWrap'),tb=$('#mapTbl').querySelector('tbody');tb.innerHTML='';
+  if(!Object.keys(DATA).length){wrap.style.display='none';return;}
+  wrap.style.display='';
+  const uni=empUniverse();
+  Object.keys(DATA).sort().forEach(nick=>{
+    if(!MAP[nick]){const g=matchNick(nick);if(g)MAP[nick]=g;}
+    const tr=el('tr');
+    let opts='<option value="">— เลือก —</option>';
+    uni.forEach(e=>{opts+='<option value="'+e.id+'"'+(MAP[nick]===e.id?' selected':'')+'>'+(e.old?'⬤ ':'')+e.label+(e.nick?' ('+e.nick+')':'')+' · '+e.pos+'</option>';});
+    tr.innerHTML='<td><b>'+nick+'</b> <span class="n">นวด '+DATA[nick].length+'</span></td><td><select data-nick="'+nick+'">'+opts+'</select></td>';
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll('select').forEach(s=>s.onchange=e=>{MAP[e.target.dataset.nick]=e.target.value;save('jc_map',MAP);renderPeople();if(CUR)buildRows();});
+  save('jc_map',MAP);
+}
+
+// canonical people: prefer shift employees; else POS nicknames
+function peopleList(){
+  if(EMPS.length){
+    return EMPS.filter(e=>!EXCLUDE_IDS.has(e.id)).map(e=>({id:e.id,label:fullNameFor(e.id,e.eng),emp:e,nick:nickForEmp(e.id),old:isOldId(e.id)}));
+  }
+  return Object.keys(DATA).filter(n=>!EXCLUDE_IDS.has(MAP[n]||matchNick(n))).sort().map(n=>{const id=MAP[n]||matchNick(n)||null;return{id,label:id?fullNameFor(id,n):n,nick:n,emp:null,old:isOldId(id)};});
+}
+function nickForEmp(id){return Object.keys(MAP).find(n=>MAP[n]===id)||null;}
+
+function renderPeople(){
+  const box=$('#people');box.innerHTML='';
+  peopleList().forEach(p=>{
+    const cnt=p.nick&&DATA[p.nick]?DATA[p.nick].length:0;
+    const b=el('button',{className:'pbtn'+(p.old?' old':''),
+      innerHTML:p.label+(p.old?'<span class="badge-old">เก่า</span>':'')+(cnt?'<span class="n">นวด '+cnt+'</span>':'')});
+    b.onclick=()=>selectPerson(p,b);
+    box.appendChild(b);
+  });
+}
+
+/* ---------- period ---------- */
+function periodRange(){
+  const mv=$('#month').value;if(!mv)return null;
+  const[y,m]=mv.split('-').map(Number);const half=$('#half').value;
+  const last=new Date(y,m,0).getDate();
+  return{y,m,from:half==='1'?1:16,to:half==='1'?15:last,half};
+}
+function periodKey(){const pr=periodRange();return pr?pr.y+'-'+pr.m+'-'+pr.half:'';}
+function periodLabel(){const pr=periodRange();return pr?pr.from+'–'+pr.to+' '+THAI_ABBR[pr.m-1]+' '+(pr.y+543):'';}
+
+/* ---------- POS last rounds for a nickname ---------- */
+function posByDay(nick){
+  const pr=periodRange(),out={};if(!pr||!nick||!DATA[nick])return out;
+  const recs=DATA[nick].filter(x=>x.dt.year===pr.y&&x.dt.mon===pr.m&&x.dt.day>=pr.from&&x.dt.day<=pr.to&&x.end!=null);
+  const byDay={};recs.forEach(x=>{(byDay[x.dt.day]=byDay[x.dt.day]||[]).push(x);});
+  Object.keys(byDay).forEach(day=>{
+    const items=byDay[day],mx=Math.max(...items.map(x=>x.end)),last=items.find(x=>x.end===mx);
+    let g=items.filter(x=>x.book&&last.book&&x.book===last.book);if(!g.length)g=[last];
+    g.sort((a,b)=>a.start-b.start);
+    out[day]={desc:g.map(x=>x.item).join(' + '),start:Math.min(...g.map(x=>x.start)),end:Math.max(...g.map(x=>x.end))};
+  });
+  return out;
+}
+
+/* ---------- build rows ---------- */
+function calcOT(start,end,code){
+  const sh=parseShiftCode(code);if(!sh||end==null)return 0;
+  let diff=end-sh[1];if(diff<=0)return 0;
+  return ($('#round').value==='floor'?Math.floor(diff/30):Math.round(diff/30))*0.5;
+}
+/* ========== SEED HISTORY (Aug–Dec 2025 from payroll Excel) ========== */
+const SEED_HISTORY=[{"key":"2025-8-2","label":"16–31 ส.ค. 2568","ts":1756857600000,"rate":112.5,"entries":[{"id":"680617","name":"น.ส.ณัฐณิชา คณามิ่งมงคล","hrs":5.0,"baht":562.5},{"id":"680618","name":"น.ส.ปภาวิชญ์ คณาสิทธิกุล","hrs":4.5,"baht":506.25}],"seeded":true},{"key":"2025-9-1","label":"1–15 ก.ย. 2568","ts":1757116800000,"rate":112.5,"entries":[{"id":"680609","name":"น.ส.กัณญาวีร์ โทขุนทด","hrs":1.19,"baht":200.0},{"id":"680617","name":"น.ส.ณัฐณิชา คณามิ่งมงคล","hrs":3.0,"baht":337.5},{"id":"680618","name":"น.ส.ปภาวิชญ์ คณาสิทธิกุล","hrs":1.0,"baht":112.5}],"seeded":true},{"key":"2025-9-2","label":"16–31 ก.ย. 2568","ts":1758153600000,"rate":112.5,"entries":[{"id":"680609","name":"น.ส.กัณญาวีร์ โทขุนทด","hrs":1.78,"baht":300.0},{"id":"680617","name":"น.ส.ณัฐณิชา คณามิ่งมงคล","hrs":37.0,"baht":4163.0},{"id":"680618","name":"น.ส.ปภาวิชญ์ คณาสิทธิกุล","hrs":42.0,"baht":4725.0}],"seeded":true},{"key":"2025-10-1","label":"1–15 ต.ค. 2568","ts":1760227200000,"rate":112.5,"entries":[{"id":"680602","name":"น.ส.น้ำฝน เทศจันทร์","hrs":7.41,"baht":1250.63},{"id":"680603","name":"น.ส.นิรภัฎ สกุลปรียากร","hrs":6.64,"baht":1121.25},{"id":"680606","name":"น.ส.พิธานันท์ ลันทูล","hrs":9.71,"baht":1638.75},{"id":"680607","name":"น.ส.มิวิดา รอบจังหวัด","hrs":6.39,"baht":1078.13},{"id":"680609","name":"น.ส.กัณญาวีร์ โทขุนทด","hrs":8.69,"baht":1466.25},{"id":"680610","name":"น.ส.ณัฏฐณิชชา โชติชวาลไพศาล","hrs":8.69,"baht":1466.25},{"id":"680613","name":"น.ส.ลักษิกา ศรีสงคราม","hrs":8.18,"baht":1380.0},{"id":"680614","name":"น.ส.ปาริฉัตร กันรัมย์","hrs":6.13,"baht":1035.0},{"id":"680617","name":"น.ส.ณัฐณิชา คณามิ่งมงคล","hrs":77.0,"baht":8663.0},{"id":"680618","name":"น.ส.ปภาวิชญ์ คณาสิทธิกุล","hrs":39.5,"baht":4444.0},{"id":"681103","name":"น.ส.ยุพเรศ โสมาเกตุ","hrs":1.0,"baht":168.75}],"seeded":true},{"key":"2025-10-2","label":"16–31 ต.ค. 2568","ts":1761264000000,"rate":112.5,"entries":[{"id":"680602","name":"น.ส.น้ำฝน เทศจันทร์","hrs":2.07,"baht":350.0},{"id":"680606","name":"น.ส.พิธานันท์ ลันทูล","hrs":2.07,"baht":350.0},{"id":"680613","name":"น.ส.ลักษิกา ศรีสงคราม","hrs":0.59,"baht":100.0},{"id":"680618","name":"น.ส.ปภาวิชญ์ คณาสิทธิกุล","hrs":68.0,"baht":7650.0},{"id":"681103","name":"น.ส.ยุพเรศ โสมาเกตุ","hrs":2.0,"baht":337.5}],"seeded":true},{"key":"2025-11-1","label":"1–15 พ.ย. 2568","ts":1762905600000,"rate":112.5,"entries":[{"id":"680602","name":"น.ส.น้ำฝน เทศจันทร์","hrs":7.41,"baht":1250.63},{"id":"680603","name":"น.ส.นิรภัฎ สกุลปรียากร","hrs":6.64,"baht":1121.25},{"id":"680606","name":"น.ส.พิธานันท์ ลันทูล","hrs":9.71,"baht":1638.75},{"id":"680607","name":"น.ส.มิวิดา รอบจังหวัด","hrs":6.39,"baht":1078.13},{"id":"680609","name":"น.ส.กัณญาวีร์ โทขุนทด","hrs":8.69,"baht":1466.25},{"id":"680610","name":"น.ส.ณัฏฐณิชชา โชติชวาลไพศาล","hrs":8.69,"baht":1466.25},{"id":"680613","name":"น.ส.ลักษิกา ศรีสงคราม","hrs":8.18,"baht":1380.0},{"id":"680614","name":"น.ส.ปาริฉัตร กันรัมย์","hrs":6.13,"baht":1035.0},{"id":"680617","name":"น.ส.ณัฐณิชา คณามิ่งมงคล","hrs":77.0,"baht":8663.0},{"id":"680618","name":"น.ส.ปภาวิชญ์ คณาสิทธิกุล","hrs":39.5,"baht":4444.0},{"id":"681103","name":"น.ส.ยุพเรศ โสมาเกตุ","hrs":1.0,"baht":168.75}],"seeded":true},{"key":"2025-11-2","label":"16–31 พ.ย. 2568","ts":1763942400000,"rate":112.5,"entries":[{"id":"680602","name":"น.ส.น้ำฝน เทศจันทร์","hrs":9.2,"baht":1552.5},{"id":"680603","name":"น.ส.นิรภัฎ สกุลปรียากร","hrs":11.76,"baht":1983.75},{"id":"680606","name":"น.ส.พิธานันท์ ลันทูล","hrs":8.43,"baht":1423.13},{"id":"680609","name":"น.ส.กัณญาวีร์ โทขุนทด","hrs":7.67,"baht":1293.75},{"id":"680610","name":"น.ส.ณัฏฐณิชชา โชติชวาลไพศาล","hrs":7.67,"baht":1293.75},{"id":"680613","name":"น.ส.ลักษิกา ศรีสงคราม","hrs":5.37,"baht":905.63},{"id":"680614","name":"น.ส.ปาริฉัตร กันรัมย์","hrs":5.62,"baht":948.75},{"id":"680617","name":"น.ส.ณัฐณิชา คณามิ่งมงคล","hrs":94.5,"baht":10631.0},{"id":"680618","name":"น.ส.ปภาวิชญ์ คณาสิทธิกุล","hrs":46.5,"baht":5231.0}],"seeded":true},{"key":"2025-12-1","label":"1–15 ธ.ค. 2568","ts":1765536000000,"rate":112.5,"entries":[{"id":"680602","name":"น.ส.น้ำฝน เทศจันทร์","hrs":7.67,"baht":1293.75},{"id":"680603","name":"น.ส.นิรภัฎ สกุลปรียากร","hrs":6.64,"baht":1121.25},{"id":"680606","name":"น.ส.พิธานันท์ ลันทูล","hrs":6.9,"baht":1164.38},{"id":"680609","name":"น.ส.กัณญาวีร์ โทขุนทด","hrs":8.18,"baht":1380.0},{"id":"680610","name":"น.ส.ณัฏฐณิชชา โชติชวาลไพศาล","hrs":4.6,"baht":776.25},{"id":"680613","name":"น.ส.ลักษิกา ศรีสงคราม","hrs":5.37,"baht":905.63},{"id":"680614","name":"น.ส.ปาริฉัตร กันรัมย์","hrs":9.71,"baht":1638.75},{"id":"680617","name":"น.ส.ณัฐณิชา คณามิ่งมงคล","hrs":20.5,"baht":2306.0},{"id":"680618","name":"น.ส.ปภาวิชญ์ คณาสิทธิกุล","hrs":98.0,"baht":11025.0},{"id":"681103","name":"น.ส.ยุพเรศ โสมาเกตุ","hrs":2.0,"baht":337.5}],"seeded":true},{"key":"2025-12-2","label":"16–31 ธ.ค. 2568","ts":1766572800000,"rate":112.5,"entries":[{"id":"680602","name":"น.ส.น้ำฝน เทศจันทร์","hrs":5.37,"baht":905.63},{"id":"680603","name":"น.ส.นิรภัฎ สกุลปรียากร","hrs":8.69,"baht":1466.25},{"id":"680606","name":"น.ส.พิธานันท์ ลันทูล","hrs":9.71,"baht":1638.75},{"id":"680609","name":"น.ส.กัณญาวีร์ โทขุนทด","hrs":5.37,"baht":905.63},{"id":"680610","name":"น.ส.ณัฏฐณิชชา โชติชวาลไพศาล","hrs":9.2,"baht":1552.5},{"id":"680613","name":"น.ส.ลักษิกา ศรีสงคราม","hrs":9.46,"baht":1595.63},{"id":"680614","name":"น.ส.ปาริฉัตร กันรัมย์","hrs":5.62,"baht":948.75},{"id":"680617","name":"น.ส.ณัฐณิชา คณามิ่งมงคล","hrs":29.5,"baht":3319.0},{"id":"680618","name":"น.ส.ปภาวิชญ์ คณาสิทธิกุล","hrs":43.5,"baht":4894.0},{"id":"681103","name":"น.ส.ยุพเรศ โสมาเกตุ","hrs":6.33,"baht":1068.75}],"seeded":true}];
+
+/* ---- initialise history from seed if empty ---- */
+(function(){
+  const existing = load('jc_hist', []);
+  if(!existing.length){
+    const seeded = SEED_HISTORY.map(r=>({...r, ts: r.ts||Date.now()}));
+    save('jc_hist', seeded);
+  }
+})();
+
+let CURP=null;
+function selectPerson(p,btn){
+  CURP=p;CUR=p.nick||p.label;
+  document.querySelectorAll('.pbtn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  $('#curName').textContent=p.label;
+  $('#oldNote').style.display=p.old?'':'none';
+  $('#editPanel').style.display='';
+  $('#printPanel').style.display='';
+  buildRows();
+}
+
+/* ---------- ROWS state ---------- */
+let ROWS=[];
+function buildRows(){
+  ROWS=[];
+  const pr=periodRange();if(!pr)return;
+  const pos=CURP&&CURP.nick?posByDay(CURP.nick):{};
+  const emp=CURP?empById(CURP.id):null;
+  const isOld=CURP&&isOldId(CURP.id);
+
+  // collect days from shift file
+  const shiftDays={};
+  if(emp){
+    for(let d=pr.from;d<=pr.to;d++){
+      const key=`${pr.y}-${pr.m}-${d}`;
+      const code=emp.days[key];
+      if(code!==undefined)shiftDays[d]=code;
+    }
+  }
+
+  // union of POS days and shift days
+  const allDays=new Set([...Object.keys(pos).map(Number),...Object.keys(shiftDays).map(Number)]);
+  [...allDays].sort((a,b)=>a-b).forEach(d=>{
+    const code=shiftDays[d]||'';
+    const off=isOff(code);
+    const pDay=pos[d];
+    if(!pDay&&off)return; // no service and day off — skip
+    const start=pDay?pDay.start:null;
+    const end=pDay?pDay.end:null;
+    let ot=pDay?calcOT(start,end,code):0;
+    // old employees: minimum 1 hr OT if working and not early-leave marker
+    if(isOld&&!off&&ot<1)ot=1;
+    ROWS.push({d,desc:pDay?pDay.desc:'',start,end,code,ot,tag:pDay?'auto':'add',earlyLeave:false,man:false});
+  });
+
+  renderRows();
+  updateTotal();
+}
+
+function renderRows(){
+  const tb=$('#rows');tb.innerHTML='';
+  const pr=periodRange();if(!pr)return;
+  ROWS.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    const dateStr=`${r.d} ${THAI_ABBR[pr.m-1]} ${pr.y+543}`;
+    const sTm=r.start!=null?toHM(r.start):'';
+    const eTm=r.end!=null?toHM(r.end):'';
+    const isOld=CURP&&isOldId(CURP.id);
+    const elChk=isOld?`<label style="font-size:11px;white-space:nowrap"><input type="checkbox" data-i="${i}" class="elChk"${r.earlyLeave?' checked':''}> ขอกลับก่อน</label>`:'';
+    tr.innerHTML=`
+      <td class="dt">${dateStr}</td>
+      <td><textarea rows="1" data-i="${i}" class="dsc">${r.desc}</textarea></td>
+      <td class="tm"><input style="width:58px" data-i="${i}" class="stm" value="${sTm}" placeholder="HH:MM"> – <input style="width:58px" data-i="${i}" class="etm" value="${eTm}" placeholder="HH:MM"></td>
+      <td class="sh"><input style="width:72px" data-i="${i}" class="shc" value="${r.code}" placeholder="รหัสกะ"></td>
+      <td class="ot">
+        <input type="number" step="0.5" min="0" data-i="${i}" class="oth" value="${r.ot}">
+        <div class="otcalc">${r.tag==='auto'?'<span class="tag auto">auto</span>':r.tag==='add'?'<span class="tag add">กะ</span>':'<span class="tag man">แก้</span>'}</div>
+        ${elChk}
+      </td>
+      <td><button class="sm danger" data-i="${i}" onclick="delRow(${i})">✕</button></td>`;
+    tb.appendChild(tr);
+  });
+  // wire inputs
+  tb.querySelectorAll('.dsc').forEach(el=>el.oninput=e=>{ROWS[+e.target.dataset.i].desc=e.target.value;});
+  tb.querySelectorAll('.stm').forEach(el=>el.onchange=e=>{const r=ROWS[+e.target.dataset.i];r.start=parseTimeInput(e.target.value);r.man=true;recalcRow(+e.target.dataset.i);});
+  tb.querySelectorAll('.etm').forEach(el=>el.onchange=e=>{const r=ROWS[+e.target.dataset.i];r.end=parseTimeInput(e.target.value);r.man=true;recalcRow(+e.target.dataset.i);});
+  tb.querySelectorAll('.shc').forEach(el=>el.onchange=e=>{const r=ROWS[+e.target.dataset.i];r.code=e.target.value;r.man=true;recalcRow(+e.target.dataset.i);});
+  tb.querySelectorAll('.oth').forEach(el=>el.oninput=e=>{ROWS[+e.target.dataset.i].ot=+e.target.value;ROWS[+e.target.dataset.i].man=true;updateTotal();});
+  tb.querySelectorAll('.elChk').forEach(el=>el.onchange=e=>{
+    const r=ROWS[+e.target.dataset.i];r.earlyLeave=e.target.checked;
+    if(r.earlyLeave&&r.ot<1){/* keep*/}else if(r.earlyLeave)r.ot=calcOT(r.start,r.end,r.code)||0;
+    else{const isOld2=CURP&&isOldId(CURP.id);const c=calcOT(r.start,r.end,r.code);r.ot=isOld2&&c<1?1:c;}
+    renderRows();updateTotal();
+  });
+}
+
+function parseTimeInput(s){
+  s=String(s||'').trim();if(!s)return null;
+  const m=s.match(/^(\d{1,2})[:\.](\d{2})$/);
+  if(m)return (+m[1])*60+(+m[2]);
+  const n=+s;if(!isNaN(n))return Math.round(n*60);
+  return null;
+}
+
+function recalcRow(i){
+  const r=ROWS[i];
+  const isOld=CURP&&isOldId(CURP.id);
+  if(!r.earlyLeave){
+    const c=calcOT(r.start,r.end,r.code);
+    r.ot=isOld&&!isOff(r.code)&&c<1?1:c;
+  }
+  renderRows();updateTotal();
+}
+
+function delRow(i){ROWS.splice(i,1);renderRows();updateTotal();}
+
+$('#addRow').onclick=()=>{
+  const pr=periodRange();if(!pr)return;
+  ROWS.push({d:pr.from,desc:'',start:null,end:null,code:'',ot:0,tag:'man',earlyLeave:false,man:true});
+  renderRows();updateTotal();
+};
+$('#recalc').onclick=()=>buildRows();
+
+function updateTotal(){
+  const tot=ROWS.reduce((s,r)=>s+(+r.ot||0),0);
+  const rate=+$('#rate').value||0;
+  $('#totHrs').textContent=tot.toFixed(1);
+  $('#totBaht').textContent=rate?`= ${(tot*rate).toLocaleString('th-TH',{maximumFractionDigits:0})} บาท`:'';
+}
+
+/* ---------- PRINT ---------- */
+$('#printOne').onclick=()=>{renderForms([CURP]);window.print();};
+$('#printAll').onclick=()=>{
+  const all=peopleList().filter(p=>p.id);
+  renderForms(all);window.print();
+};
+
+function renderForms(people){
+  const forms=$('#forms');forms.innerHTML='';
+  const pr=periodRange();if(!pr)return;
+  const rate=+$('#rate').value||0;
+  people.forEach(p=>{
+    // get rows for this person
+    const savedRows=p.id===CURP?.id?ROWS:buildRowsFor(p);
+    if(!savedRows.length)return;
+    const totH=savedRows.reduce((s,r)=>s+(+r.ot||0),0);
+    const sheet=document.createElement('div');
+    sheet.className='sheet';
+    const rows=savedRows.map((r,idx)=>`<tr>
+      <td class="c">${idx+1}</td>
+      <td class="c">${r.d} ${THAI_ABBR[pr.m-1]} ${pr.y+543}</td>
+      <td class="desc">${r.desc||'—'}</td>
+      <td class="c">${r.start!=null?toHM(r.start):''}</td>
+      <td class="c">${r.end!=null?toHM(r.end):''}</td>
+      <td class="c">${r.code||''}</td>
+      <td class="c">${(+r.ot||0).toFixed(1)}</td>
+    </tr>`).join('');
+    sheet.innerHTML=`
+      <div class="title">ใบขอเบิกค่าล่วงเวลาการทำงาน</div>
+      <div class="meta">
+        <div>ชื่อ–สกุล: <span class="v">${p.label}</span></div>
+        <div>ตำแหน่ง: <span class="v">${positionFor(p.id)}</span></div>
+        <div>รหัสพนักงาน: <span class="v">${p.id||''}</span></div>
+      </div>
+      <div class="period">รอบจ่ายเงิน: ${periodLabel()}</div>
+      <table class="form"><thead><tr>
+        <th style="width:32px">ที่</th><th style="width:80px">วันที่</th>
+        <th>รายละเอียดงานที่ทำล่วงเวลา</th>
+        <th style="width:56px">เริ่ม</th><th style="width:56px">สิ้นสุด</th>
+        <th style="width:52px">รหัสกะ</th><th style="width:60px">OT (ชม.)</th>
+      </tr></thead><tbody>${rows}</tbody>
+      <tfoot><tr class="sumrow"><td colspan="6" style="text-align:right;padding-right:8px">รวม OT ทั้งหมด</td><td class="hh">${totH.toFixed(1)}</td></tr>
+      ${rate?`<tr class="sumrow"><td colspan="6" style="text-align:right;padding-right:8px">รวมเงิน (${rate} บาท/ชม.)</td><td class="hh">${(totH*rate).toLocaleString('th-TH',{maximumFractionDigits:0})} บาท</td></tr>`:''}
+      </tfoot></table>
+      <div class="sign">
+        <div><div style="border-bottom:1px solid #000;width:160px;margin:0 auto"></div><div style="margin-top:6px">ลายมือชื่อพนักงาน</div><div style="color:#555;font-size:13px">(${p.label})</div></div>
+        <div><div style="border-bottom:1px solid #000;width:160px;margin:0 auto"></div><div style="margin-top:6px">ลายมือชื่อผู้อนุมัติ</div><div style="color:#555;font-size:13px">วันที่ ......./......./ 25.....</div></div>
+      </div>`;
+    forms.appendChild(sheet);
+  });
+}
+
+function buildRowsFor(p){
+  const pr=periodRange();if(!pr)return[];
+  const pos=p.nick?posByDay(p.nick):{};
+  const emp=empById(p.id);
+  const isOld=isOldId(p.id);
+  const shiftDays={};
+  if(emp){for(let d=pr.from;d<=pr.to;d++){const key=`${pr.y}-${pr.m}-${d}`;const code=emp.days[key];if(code!==undefined)shiftDays[d]=code;}}
+  const allDays=new Set([...Object.keys(pos).map(Number),...Object.keys(shiftDays).map(Number)]);
+  const out=[];
+  [...allDays].sort((a,b)=>a-b).forEach(d=>{
+    const code=shiftDays[d]||'';const off=isOff(code);const pDay=pos[d];
+    if(!pDay&&off)return;
+    const start=pDay?pDay.start:null,end=pDay?pDay.end:null;
+    let ot=pDay?calcOT(start,end,code):0;
+    if(isOld&&!off&&ot<1)ot=1;
+    out.push({d,desc:pDay?pDay.desc:'',start,end,code,ot,tag:pDay?'auto':'add'});
+  });
+  return out;
+}
+
+/* ---------- SAVE HISTORY ---------- */
+$('#saveHist').onclick=()=>{
+  const pk=periodKey();if(!pk){$('#saveMsg').textContent='⚠️ กรุณาเลือกรอบจ่ายก่อน';return;}
+  const rate=+$('#rate').value||0;
+  const all=peopleList().filter(p=>p.id);
+  const entries=all.map(p=>{
+    const rows=p.id===CURP?.id?ROWS:buildRowsFor(p);
+    const hrs=rows.reduce((s,r)=>s+(+r.ot||0),0);
+    return{id:p.id,name:p.label,hrs:+hrs.toFixed(2),baht:+(hrs*rate).toFixed(2)};
+  }).filter(e=>e.hrs>0);
+
+  const hist=load('jc_hist',[]);
+  const existing=hist.findIndex(r=>r.key===pk);
+  const record={key:pk,label:periodLabel(),ts:Date.now(),rate,entries};
+  if(existing>=0)hist[existing]=record;else hist.push(record);
+  hist.sort((a,b)=>a.key.localeCompare(b.key));
+  save('jc_hist',hist);
+  $('#saveMsg').textContent=`✅ บันทึกแล้ว ${entries.length} คน รอบ ${periodLabel()}`;
+  setTimeout(()=>$('#saveMsg').textContent='',4000);
+};
+
+/* ---------- DASHBOARD ---------- */
+function renderDash(){
+  const hist=load('jc_hist',[]);
+  const filter=$('#dashFilter').value;
+
+  // populate month filter
+  const months=[...new Set(hist.map(r=>r.key.split('-').slice(0,2).join('-')))].sort();
+  const sel=$('#dashFilter');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">ทุกเดือน</option>';
+  months.forEach(m=>{
+    const[y,mo]=m.split('-');const opt=document.createElement('option');
+    opt.value=m;opt.textContent=`${THAI_MON[+mo-1]} ${+y+543}`;
+    if(m===cur)opt.selected=true;
+    sel.appendChild(opt);
+  });
+
+  const filtered=filter?hist.filter(r=>r.key.startsWith(filter)):hist;
+
+  // summary cards
+  const totalBaht=filtered.reduce((s,r)=>s+r.entries.reduce((ss,e)=>ss+e.baht,0),0);
+  const totalHrs=filtered.reduce((s,r)=>s+r.entries.reduce((ss,e)=>ss+e.hrs,0),0);
+  const totalPeople=new Set(filtered.flatMap(r=>r.entries.map(e=>e.id))).size;
+  $('#dashCards').innerHTML=`
+    <div class="card"><div class="k">ค่า OT รวม (บาท)</div><div class="v">${totalBaht.toLocaleString('th-TH',{maximumFractionDigits:0})}</div></div>
+    <div class="card"><div class="k">ชั่วโมง OT รวม</div><div class="v">${totalHrs.toFixed(1)}</div></div>
+    <div class="card"><div class="k">จำนวนพนักงาน</div><div class="v">${totalPeople}</div></div>
+    <div class="card"><div class="k">จำนวนรอบ</div><div class="v">${filtered.length}</div></div>`;
+
+  // by employee
+  const byEmp={};
+  filtered.forEach(r=>r.entries.forEach(e=>{
+    if(!byEmp[e.id])byEmp[e.id]={name:e.name,hrs:0,baht:0};
+    byEmp[e.id].hrs+=e.hrs;byEmp[e.id].baht+=e.baht;
+  }));
+  const empArr=Object.values(byEmp).sort((a,b)=>b.baht-a.baht);
+  const maxB=empArr.length?Math.max(...empArr.map(e=>e.baht)):1;
+  const empRows=empArr.map(e=>`<tr>
+    <td>${e.name}</td>
+    <td class="num">${e.hrs.toFixed(1)}</td>
+    <td class="num">${e.baht.toLocaleString('th-TH',{maximumFractionDigits:0})}</td>
+    <td><div class="bar" style="width:${Math.round(e.baht/maxB*160)}px"></div></td>
+  </tr>`).join('');
+  $('#dashByEmp').innerHTML=`<table class="dash"><thead><tr><th>ชื่อพนักงาน</th><th class="num">OT (ชม.)</th><th class="num">ค่าใช้จ่าย (บาท)</th><th></th></tr></thead><tbody>${empRows||'<tr><td colspan="4" class="empty">ยังไม่มีข้อมูล</td></tr>'}</tbody></table>`;
+
+  // by period
+  const periRows=filtered.slice().reverse().map(r=>{
+    const totH=r.entries.reduce((s,e)=>s+e.hrs,0);
+    const totB=r.entries.reduce((s,e)=>s+e.baht,0);
+    const dt=r.ts?new Date(r.ts).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}):'—';
+    return`<tr><td>${r.label}${r.seeded?'<span class="tag" style="margin-left:6px;background:#eee">ประวัติ</span>':''}</td><td>${r.entries.length}</td><td class="num">${totH.toFixed(1)}</td><td class="num">${totB.toLocaleString('th-TH',{maximumFractionDigits:0})}</td><td style="font-size:12px;color:var(--muted)">${dt}</td></tr>`;
+  }).join('');
+  $('#dashByPeriod').querySelector('tbody').innerHTML=periRows||'<tr><td colspan="5" class="empty">ยังไม่มีข้อมูล</td></tr>';
+}
+
+$('#dashFilter').onchange=()=>renderDash();
+
+$('#clearHist').onclick=()=>{
+  if(!confirm('ล้างประวัติ OT ทั้งหมด?\n(รวมข้อมูลเดิม ส.ค.–ธ.ค. 2568 ด้วย)'))return;
+  localStorage.removeItem('jc_hist');
+  renderDash();
+};
+</script>
+</body>
+</html>add('active');
+  $('#curName').innerHTML=p.label+(p.old?' <span class="badge-old">ชุดเก่า</span>':'');
+  $('#oldNote').style.display=p.old?'':'none';
+  $('#editPanel').style.display='';$('#printPanel').style.display='';$('#saveMsg').textContent='';
+  buildRows();
+}
+function buildRows(){
+  if(!CURP)return;ROWS=computeRows(CURP);renderRows();
+}
+function computeRows(p){
+  const pr=periodRange();if(!pr)return[];
+  const pos=posByDay(p.nick);
+  const days=new Set();
+  // shift working days
+  if(p.emp){
+    for(let d=pr.from;d<=pr.to;d++){const code=p.emp.days[pr.y+'-'+pr.m+'-'+d];
+      if(code&&!isOff(code)){ if(p.old)days.add(d); else if(pos[d])days.add(d); }
+    }
+  }
+  Object.keys(pos).forEach(d=>days.add(+d));
+  return[...days].sort((a,b)=>a-b).map(d=>{
+    const code=p.emp?(p.emp.days[pr.y+'-'+pr.m+'-'+d]||''):'' ;
+    const pp=pos[d];
+    const start=pp?pp.start:null,end=pp?pp.end:null;
+    const base=calcOT(start,end,code);
+    let ot=base,leftEarly=false;
+    if(p.old){ot=Math.max(1,base);}
+    const src=pp?'auto':(p.emp?'shift':'man');
+    return{day:d,desc:pp?pp.desc:'',start,end,shift:code,base,ot,old:p.old,leftEarly,src};
+  });
+}
+function rowOT(r){return r.old?(r.leftEarly?r.base:Math.max(1,r.base)):r.base;}
+
+function renderRows(){
+  const tb=$('#rows');tb.innerHTML='';
+  if(!ROWS.length){tb.innerHTML='<tr><td colspan="6" class="empty">ไม่พบวันทำงานในรอบนี้ — กด “เพิ่มบรรทัด”</td></tr>';updateTotal();return;}
+  ROWS.forEach((r,i)=>{
+    const tr=el('tr');
+    const tag=r.src==='auto'?'<span class="tag auto">auto</span>':(r.src==='shift'?'<span class="tag add">กะ</span>':'<span class="tag man">แก้มือ</span>');
+    const le=r.old?'<label class="le"><input type="checkbox" '+(r.leftEarly?'checked':'')+'> ขอกลับก่อน</label>':'';
+    const calcLbl=r.old?('ขั้นต่ำ1·คำนวณ '+r.base):('คำนวณ '+r.base);
+    tr.innerHTML=
+      '<td class="dt"><input value="'+(r.day||'')+'" style="width:42px;text-align:center"></td>'+
+      '<td><textarea rows="1">'+String(r.desc).replace(/</g,'&lt;')+'</textarea><div style="margin-top:2px">'+tag+'</div></td>'+
+      '<td class="tm"><input value="'+(r.start!=null?toHM(r.start)+(r.end!=null?'-'+toHM(r.end):''):'')+'" style="width:116px" placeholder="—"></td>'+
+      '<td class="sh"><input value="'+(r.shift||'')+'" style="width:84px" placeholder="J10-19"></td>'+
+      '<td class="ot"><input value="'+r.ot+'"><div class="otcalc">'+calcLbl+'</div>'+le+'</td>'+
+      '<td><button class="sm danger">✕</button></td>';
+    const q=s=>tr.querySelector(s);
+    q('.dt input').oninput=e=>{r.day=e.target.value;r.src='man'};
+    q('textarea').oninput=e=>{r.desc=e.target.value;r.src='man'};
+    q('.tm input').oninput=e=>{const m=e.target.value.match(/(\d{1,2}[:.]\d{2})\s*[-–]\s*(\d{1,2}[:.]\d{2})/);if(m){r.start=hm(m[1]);r.end=hm(m[2]);}r.base=calcOT(r.start,r.end,r.shift);r.ot=rowOT(r);refreshRow(tr,r);r.src='man';};
+    q('.sh input').oninput=e=>{r.shift=e.target.value;r.base=calcOT(r.start,r.end,r.shift);r.ot=rowOT(r);refreshRow(tr,r);r.src='man';};
+    q('.ot input').oninput=e=>{r.ot=parseFloat(e.target.value)||0;updateTotal();};
+    if(r.old)q('.le input').onchange=e=>{r.leftEarly=e.target.checked;r.ot=rowOT(r);refreshRow(tr,r);};
+    q('.danger').onclick=()=>{ROWS.splice(i,1);renderRows();};
+    tb.appendChild(tr);
+  });
+  updateTotal();
+}
+function refreshRow(tr,r){tr.querySelector('.ot input').value=r.ot;tr.querySelector('.otcalc').textContent=(r.old?'ขั้นต่ำ1·คำนวณ ':'คำนวณ ')+r.base;updateTotal();}
+function totalOT(){return +ROWS.reduce((s,r)=>s+(parseFloat(r.ot)||0),0).toFixed(2);}
+function updateTotal(){
+  const t=totalOT();$('#totHrs').textContent=t;
+  const rate=parseFloat($('#rate').value)||0;
+  $('#totBaht').textContent=rate?('≈ '+(t*rate).toLocaleString()+' บาท'):'';
+}
+
+$('#addRow').onclick=()=>{ROWS.push({day:'',desc:'',start:null,end:null,shift:CURP&&CURP.emp?'':'' ,base:0,ot:0,old:CURP&&CURP.old,leftEarly:false,src:'man'});renderRows();};
+$('#recalc').onclick=()=>{ROWS.forEach(r=>{r.base=calcOT(r.start,r.end,r.shift);r.ot=rowOT(r);});renderRows();};
+['#month','#half'].forEach(s=>$(s).addEventListener('change',()=>{if(CURP)buildRows();}));
+
+/* ---------- print ---------- */
+function buildSheet(p,rows){
+  const tot=+rows.reduce((s,r)=>s+(parseFloat(r.ot)||0),0).toFixed(2);
+  let body='';
+  rows.forEach(r=>{
+    const tm=(r.start!=null?toHM(r.start)+(r.end!=null?' - '+toHM(r.end):''):'');
+    const desc=[r.desc,tm,r.shift?'('+r.shift+')':''].filter(Boolean).join('  ');
+    body+='<tr><td class="c">'+(r.day||'')+'</td><td class="desc">'+String(desc).replace(/</g,'&lt;')+'</td><td class="c">'+(r.ot||'')+'</td><td></td></tr>';
+  });
+  for(let k=rows.length;k<16;k++)body+='<tr><td class="c">&nbsp;</td><td></td><td></td><td></td></tr>';
+  return `<div class="sheet">
+    <div class="title">ใบขอเบิกค่าล่วงเวลา</div>
+    <div class="meta"><div>ชื่อ-นามสกุล : <span class="v">${p.label}</span></div><div>ตำแหน่ง : <span class="v">${positionFor(p.id)}</span></div></div>
+    <div class="period">รอบวันที่ ${periodLabel()}${p.old?' · พนักงานชุดเก่า (OT ขั้นต่ำ 1 ชม./วันทำงาน)':''}</div>
+    <table class="form"><thead><tr><th style="width:60px">วันที่</th><th>อธิบายงานที่ทำล่วงเวลา</th><th style="width:80px">จำนวนชั่วโมง</th><th style="width:90px">ผู้อนุมัติ</th></tr></thead>
+    <tbody>${body}<tr class="sumrow"><td colspan="2">รวม</td><td class="hh">${tot}</td><td>ชั่วโมง</td></tr></tbody></table>
+    <div class="sign"><div>ลงชื่อ <span class="line"></span> ผู้ขออนุมัติ<br>( <span class="line" style="width:120px"></span> )<br><span style="font-size:12px">พนักงาน — เซ็นรับทราบ</span></div>
+    <div>ลงชื่อ <span class="line"></span> อนุมัติ<br>( <span class="line" style="width:120px"></span> )<br><span style="font-size:12px">ผู้จัดการ</span></div></div>
+    <div class="ack">หมายเหตุ: ผู้จัดการตรวจสอบเวลากับเครื่องสแกนลายนิ้วมือจริงทุกรอบจ่ายเงินก่อนอนุมัติ · พนักงานเซ็นรับทราบจำนวนชั่วโมง OT</div></div>`;
+}
+function printSheets(list){const f=$('#forms');f.innerHTML=list.map(x=>buildSheet(x.p,x.rows)).join('');window.print();}
+$('#printOne').onclick=()=>{if(CURP)printSheets([{p:CURP,rows:ROWS}]);};
+$('#printAll').onclick=()=>{
+  const list=peopleList().map(p=>({p,rows:p===CURP?ROWS:computeRows(p)})).filter(x=>x.rows.length);
+  if(list.length)printSheets(list);
+};
+
+/* ---------- history + dashboard ---------- */
+$('#saveHist').onclick=()=>{
+  const pr=periodRange();if(!pr)return;
+  let hist=load('jc_hist',[]);const key=periodKey();const rate=parseFloat($('#rate').value)||0;
+  hist=hist.filter(h=>h.period!==key);
+  let n=0;
+  peopleList().forEach(p=>{
+    const rows=p===CURP?ROWS:computeRows(p);
+    if(!rows.length)return;
+    const tot=+rows.reduce((s,r)=>s+(parseFloat(r.ot)||0),0).toFixed(2);
+    if(tot<=0&&!p.old)return;
+    hist.push({period:key,label:periodLabel(),y:pr.y,m:pr.m,half:pr.half,empId:p.id,name:p.label,old:!!p.old,totalOT:tot,workdays:rows.length,rate,savedAt:new Date().toISOString()});
+    n++;
+  });
+  save('jc_hist',hist);
+  $('#saveMsg').textContent='✅ บันทึกรอบ '+periodLabel()+' จำนวน '+n+' คนเรียบร้อย — ดูที่แท็บ Dashboard';
+};
+$('#clearHist').onclick=()=>{if(confirm('ล้างประวัติ OT ทั้งหมด?')){save('jc_hist',[]);renderDash();}};
+
+function renderDash(){
+  const hist=load('jc_hist',[]);
+  // month filter options
+  const fSel=$('#dashFilter');const cur=fSel.value;
+  const months=[...new Set(hist.map(h=>h.y+'-'+h.m))];
+  fSel.innerHTML='<option value="">ทุกเดือน</option>'+months.sort().map(mk=>{const[y,m]=mk.split('-');return '<option value="'+mk+'">'+THAI_ABBR[m-1]+' '+(+y+543)+'</option>';}).join('');
+  fSel.value=cur;
+  fSel.onchange=renderDash;
+  const data=fSel.value?hist.filter(h=>h.y+'-'+h.m===fSel.value):hist;
+  const totHrs=+data.reduce((s,h)=>s+h.totalOT,0).toFixed(2);
+  const totCost=data.reduce((s,h)=>s+h.totalOT*(h.rate||0),0);
+  const periods=new Set(data.map(h=>h.period)).size;
+  $('#dashCards').innerHTML=
+    card('รวม OT ทั้งหมด',totHrs+' ชม.')+
+    card('ค่าใช้จ่าย OT',totCost?totCost.toLocaleString()+' ฿':'— (ตั้งอัตรา OT)')+
+    card('จำนวนรอบ',periods)+
+    card('รายการพนักงาน',data.length);
+  // by employee
+  const byE={};data.forEach(h=>{const k=h.empId||h.name;byE[k]=byE[k]||{name:h.name,hrs:0,cost:0,old:h.old};byE[k].hrs+=h.totalOT;byE[k].cost+=h.totalOT*(h.rate||0);});
+  const arr=Object.values(byE).sort((a,b)=>b.hrs-a.hrs);const mx=Math.max(1,...arr.map(a=>a.hrs));
+  $('#dashByEmp').innerHTML=arr.length?arr.map(a=>
+    '<div style="display:flex;align-items:center;gap:10px;margin:5px 0">'+
+    '<div style="width:150px;font-size:13px">'+a.name+(a.old?' <span class="badge-old">เก่า</span>':'')+'</div>'+
+    '<div class="bar" style="width:'+(a.hrs/mx*100)+'%"></div>'+
+    '<div class="bartxt">'+a.hrs+' ชม.'+(a.cost?' · '+a.cost.toLocaleString()+'฿':'')+'</div></div>').join(''):'<div class="empty">ยังไม่มีข้อมูล — ไปบันทึกรอบที่แท็บ “ทำฟอร์ม”</div>';
+  // by period
+  const byP={};data.forEach(h=>{byP[h.period]=byP[h.period]||{label:h.label,n:0,hrs:0,cost:0,at:h.savedAt};byP[h.period].n++;byP[h.period].hrs+=h.totalOT;byP[h.period].cost+=h.totalOT*(h.rate||0);});
+  const pr=Object.values(byP).sort((a,b)=>a.label<b.label?1:-1);
+  $('#dashByPeriod').querySelector('tbody').innerHTML=pr.length?pr.map(p=>
+    '<tr><td>'+p.label+'</td><td>'+p.n+'</td><td class="num">'+(+p.hrs.toFixed(2))+'</td><td class="num">'+(p.cost?p.cost.toLocaleString():'—')+'</td><td>'+new Date(p.at).toLocaleDateString('th-TH')+'</td></tr>').join(''):'<tr><td colspan="5" class="empty">ยังไม่มีข้อมูล</td></tr>';
+}
+function card(k,v){return '<div class="card"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>';}
+</script>
+</body>
+</html>
