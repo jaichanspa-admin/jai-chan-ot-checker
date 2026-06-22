@@ -1,0 +1,9 @@
+# Local helper scripts generated outside this repository.
+push_to_github.bat
+enable_pages.bat
+
+# OS/editor noise.
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
