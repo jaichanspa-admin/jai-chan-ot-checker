@@ -5,7 +5,7 @@
 **เปิดใช้งาน:** ดาวน์โหลด `index.html` แล้วเปิดด้วยเบราว์เซอร์ (Chrome/Edge แนะนำ)
 
 **Repository:** [jaichanspa-admin/jai-chan-ot-checker](https://github.com/jaichanspa-admin/jai-chan-ot-checker)
-**Live:** https://jaichanspa-admin.github.io/jai-chan-ot-checker/
+**Live:** [https://jaichanspa-admin.github.io/jai-chan-ot-checker/](https://jaichanspa-admin.github.io/jai-chan-ot-checker/)
 
 ---
 
