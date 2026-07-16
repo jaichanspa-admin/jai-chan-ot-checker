@@ -276,7 +276,7 @@ const ROSTER={
 "681104":{nick:"แนน",name:"NAN KYI KYI THAN",position:"Maid"},
 "6901005":{nick:"อาราเล่",name:"น.ส.ธณิกานต์ ฤทธิเดช",position:"Spa Manager"},
 "6902049":{nick:"แหม่ม",name:"น.ส. สุวรรณา เครือสง่าถาวร",position:"Maid"},
-"6902055":{nick:"โมจิ",name:"น.ส.วริศรา แซ่ตั้ง",position:"Therapist"},
+"6902055":{nick:"โมมีนา",name:"น.ส.วริศรา แซ่ตั้ง",position:"Therapist"},
 "6902057":{nick:"ยู",name:"น.ส.สุกัญญา ทัดระเบียบ",position:"Marketing Executive"},
 "690619":{nick:"ตุ๊กตา",name:"น.ส.ฉัตรชนก ลันทุนทด",position:"Therapist"},
 "690620":{nick:"น่าน",name:"น.ส. วราลี สนธิรักษ์",position:"Receptionist (Part Time)"},
@@ -293,7 +293,7 @@ const ROSTER={
 "690631":{nick:"นิสา",name:"น.ส. ปาณิสา ยานะสอน",position:"Therapist"}
 };
 // เผื่อชื่อเล่นใน POS ต่างจากทะเบียน (แก้คู่ตายตัว)
-const ALIAS_FIX={"น้ำฝน":"680602","วีนา":"690627","มีนา":"6902055"};
+const ALIAS_FIX={"น้ำฝน":"680602","วีนา":"690627","มีนา":"6902055","โมมีนา":"6902055","โมจิ":"6902055"};
 // พนักงานที่ไม่มี OT — ตัดออกจากระบบ
 const EXCLUDE_IDS=new Set(["690626","690622","6901005","6902049","680617"]);
 function normTH(s){return String(s||"").replace(/^(น\.ส\.|นาย|นาง)\s*/,"").replace(/[ัิ-ฺ็-๎\s]/g,"");}
