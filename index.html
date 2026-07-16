@@ -530,16 +530,22 @@ function renderMap(){
 // canonical people: prefer shift employees; else POS nicknames
 function peopleList(){
   if(EMPS.length){
-    return EMPS.filter(e=>!EXCLUDE_IDS.has(e.id)).map(e=>({id:e.id,label:fullNameFor(e.id,e.eng),emp:e,nick:nickForEmp(e.id),old:isOldId(e.id)}));
+    return EMPS.filter(e=>!EXCLUDE_IDS.has(e.id)).map(e=>{const nicks=nicknamesForEmp(e.id);return{id:e.id,label:fullNameFor(e.id,e.eng),emp:e,nick:nicks[0]||null,nicks,old:isOldId(e.id)};});
   }
-  return Object.keys(DATA).filter(n=>!EXCLUDE_IDS.has(MAP[n]||matchNick(n))).sort().map(n=>{const id=MAP[n]||matchNick(n)||null;return{id,label:id?fullNameFor(id,n):n,nick:n,emp:null,old:isOldId(id)};});
+  return Object.keys(DATA).filter(n=>!EXCLUDE_IDS.has(MAP[n]||matchNick(n))).sort().map(n=>{const id=MAP[n]||matchNick(n)||null;return{id,label:id?fullNameFor(id,n):n,nick:n,nicks:[n],emp:null,old:isOldId(id)};});
 }
-function nickForEmp(id){return Object.keys(MAP).find(n=>MAP[n]===id)||null;}
+function nicknamesForEmp(id){
+  const nicks=Object.keys(MAP).filter(n=>MAP[n]===id);
+  const masterNick=nickOf(id);
+  if(masterNick&&matchNick(masterNick)===id&&!nicks.includes(masterNick))nicks.push(masterNick);
+  return nicks.sort((a,b)=>(DATA[b]?.length||0)-(DATA[a]?.length||0)||a.localeCompare(b,'th'));
+}
+function nickForEmp(id){return nicknamesForEmp(id)[0]||null;}
 
 function renderPeople(){
   const box=$('#people');box.innerHTML='';
   peopleList().forEach(p=>{
-    const cnt=p.nick&&DATA[p.nick]?DATA[p.nick].length:0;
+    const cnt=(p.nicks||[p.nick]).reduce((s,n)=>s+(DATA[n]?.length||0),0);
     const b=el('button',{className:'pbtn'+(p.old?' old':''),
       innerHTML:p.label+(p.old?'<span class="badge-old">เก่า</span>':'')+(cnt?'<span class="n">นวด '+cnt+'</span>':'')});
     b.onclick=()=>selectPerson(p,b);
@@ -559,8 +565,8 @@ function periodLabel(){const pr=periodRange();return pr?pr.from+'–'+pr.to+' '+
 
 /* ---------- POS last rounds for a nickname ---------- */
 function posByDay(nick){
-  const pr=periodRange(),out={};if(!pr||!nick||!DATA[nick])return out;
-  const recs=DATA[nick].filter(x=>x.dt.year===pr.y&&x.dt.mon===pr.m&&x.dt.day>=pr.from&&x.dt.day<=pr.to&&x.end!=null);
+  const pr=periodRange(),out={},nicks=Array.isArray(nick)?nick.filter(Boolean):[nick].filter(Boolean);if(!pr||!nicks.length)return out;
+  const recs=nicks.flatMap(n=>DATA[n]||[]).filter(x=>x.dt.year===pr.y&&x.dt.mon===pr.m&&x.dt.day>=pr.from&&x.dt.day<=pr.to&&x.end!=null);
   const byDay={};recs.forEach(x=>{(byDay[x.dt.day]=byDay[x.dt.day]||[]).push(x);});
   Object.keys(byDay).forEach(day=>{
     const items=byDay[day],mx=Math.max(...items.map(x=>x.end)),last=items.find(x=>x.end===mx);
@@ -593,7 +599,7 @@ function buildRows(){
 }
 function computeRows(p){
   const pr=periodRange();if(!pr)return[];
-  const pos=posByDay(p.nick);
+  const pos=posByDay(p.nicks||p.nick);
   const days=new Set();
   // shift working days
   if(p.emp){
