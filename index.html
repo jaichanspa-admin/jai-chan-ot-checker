@@ -290,12 +290,13 @@ const ROSTER={
 "690628":{nick:"แป้ง",name:"น.ส. สุวัจนี คำศรี",position:"Therapist"},
 "690629":{nick:"แต้ว",name:"น.ส. วรางคณา เอี่ยมจิตต์",position:"Receptionist"},
 "690630":{nick:"ไค",name:"นาย กัลยากฤต รัตนยะนนท์",position:"Therapist"},
-"690631":{nick:"นิสา",name:"น.ส. ปาณิสา ยานะสอน",position:"Therapist"}
+"690631":{nick:"นิสา",name:"น.ส. ปาณิสา ยานะสอน",position:"Therapist"},
+"690632":{nick:"ขวัญ",name:"ชยุตา พรจตุรภัทร",position:"Therapist"}
 };
 // เผื่อชื่อเล่นใน POS ต่างจากทะเบียน (แก้คู่ตายตัว)
-const ALIAS_FIX={"น้ำฝน":"680602","วีนา":"690627","มีนา":"6902055","โมมีนา":"6902055","โมจิ":"6902055"};
+const ALIAS_FIX={"น้ำฝน":"680602","วีนา":"690627","มีนา":"6902055","โมมีนา":"6902055","โมจิ":"6902055","ขวัญ":"690632"};
 // เผื่อชื่อใน POS / ชื่อ sheet กะ เป็นอังกฤษ แต่ต้องแสดงเป็นชื่อเล่นไทย
-const NICK_ALIAS={"chayuta":"ขวัญ"};
+const NICK_ALIAS={"chayuta":"ขวัญ","kwan":"ขวัญ"};
 // พนักงานที่ไม่มี OT — ตัดออกจากระบบ
 const EXCLUDE_IDS=new Set(["690626","690622","6901005","6902049","680617"]);
 function aliasNick(s){const raw=String(s||"").trim();return NICK_ALIAS[raw.toLowerCase()]||raw;}
