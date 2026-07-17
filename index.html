@@ -299,6 +299,7 @@ const NICK_ALIAS={"chayuta":"ขวัญ"};
 // พนักงานที่ไม่มี OT — ตัดออกจากระบบ
 const EXCLUDE_IDS=new Set(["690626","690622","6901005","6902049","680617"]);
 function aliasNick(s){const raw=String(s||"").trim();return NICK_ALIAS[raw.toLowerCase()]||raw;}
+function hasNickAlias(s){const raw=String(s||"").trim();return !!NICK_ALIAS[raw.toLowerCase()];}
 function normTH(s){return String(s||"").replace(/^(น\.ส\.|นาย|นาง)\s*/,"").replace(/[ัิ-ฺ็-๎\s]/g,"");}
 function normKey(s){return normTH(aliasNick(s)).toLowerCase();}
 function lev(a,b){const m=a.length,n=b.length,d=[...Array(m+1)].map((_,i)=>[i,...Array(n).fill(0)]);for(let j=0;j<=n;j++)d[0][j]=j;
@@ -314,6 +315,10 @@ function matchNick(nick){
   f=(EMPS||[]).find(e=>normKey(e.eng)===n||normKey(nickOf(e.id))===n);if(f)return f.id;
   f=ids.find(id=>{const m=normKey(MASTER[id].nick);return m&&Math.abs(m.length-n.length)<=1&&lev(m,n)<=1;});if(f)return f;
   return null;
+}
+function autoMapNick(nick){
+  const g=matchNick(nick);
+  if(g&&(!MAP[nick]||hasNickAlias(nick)))MAP[nick]=g;
 }
 
 let RAW=[], DATA={};          // POS
@@ -410,7 +415,7 @@ function parseEmpMaster(grid,fname){
   // pull readable names into NAMES + auto-map nicknames to POS
   let mapped=0;
   Object.entries(MASTER).forEach(([id,m])=>{ if(!isJunk(m.name))NAMES[id]=m.name; });
-  Object.keys(DATA).forEach(nick=>{const g=matchNick(nick);if(g){MAP[nick]=g;mapped++;}});
+  Object.keys(DATA).forEach(nick=>{const before=MAP[nick];autoMapNick(nick);if(MAP[nick]&&MAP[nick]!==before)mapped++;});
   save('jc_names',NAMES);save('jc_map',MAP);
   const warn=(bad>tot*0.5)?' <span style="color:var(--warn)">⚠ ภาษาไทยในไฟล์เพี้ยน (เป็น "?") — ใช้ฐานข้อมูลในตัวแทนแล้ว ไม่ต้องอัปไฟล์นี้ก็ได้</span>':'';
   $('#infoEmp').innerHTML='✅ <b>'+fname+'</b> · '+tot+' คน · จับคู่ชื่อเล่นอัตโนมัติ '+mapped+' คน'+warn;
@@ -464,7 +469,7 @@ function parsePOS(wb,fname){
   const months={};RAW.forEach(x=>{months[x.dt.year+'-'+String(x.dt.mon).padStart(2,'0')]=1;});
   const mk=Object.keys(months).sort().pop(); if(mk&&!$('#month').value)$('#month').value=mk;
   // auto-map POS nickname -> empId
-  Object.keys(DATA).forEach(nick=>{if(!MAP[nick]){const g=matchNick(nick);if(g)MAP[nick]=g;}});
+  Object.keys(DATA).forEach(autoMapNick);
   save('jc_map',MAP);
   $('#infoPos').innerHTML='✅ <b>'+fname+'</b> · '+RAW.length+' รายการ · '+Object.keys(DATA).length+' ชื่อ';
   ready();
@@ -499,7 +504,7 @@ function parseShiftFile(wb,fname){
       NAMES[e.id]=aliased;
     }
   });
-  Object.keys(DATA).forEach(nick=>{if(!MAP[nick]){const g=matchNick(nick);if(g)MAP[nick]=g;}});
+  Object.keys(DATA).forEach(autoMapNick);
   save('jc_names',NAMES);save('jc_map',MAP);
   // detect month from shift days if POS not loaded
   if(!$('#month').value&&EMPS.length){
@@ -531,7 +536,7 @@ function renderMap(){
   wrap.style.display='';
   const uni=empUniverse();
   Object.keys(DATA).sort().forEach(nick=>{
-    if(!MAP[nick]){const g=matchNick(nick);if(g)MAP[nick]=g;}
+    autoMapNick(nick);
     const tr=el('tr');
     let opts='<option value="">— เลือก —</option>';
     uni.forEach(e=>{opts+='<option value="'+e.id+'"'+(MAP[nick]===e.id?' selected':'')+'>'+(e.old?'⬤ ':'')+e.label+(e.nick?' ('+e.nick+')':'')+' · '+e.pos+'</option>';});
