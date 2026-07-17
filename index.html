@@ -294,19 +294,25 @@ const ROSTER={
 };
 // เผื่อชื่อเล่นใน POS ต่างจากทะเบียน (แก้คู่ตายตัว)
 const ALIAS_FIX={"น้ำฝน":"680602","วีนา":"690627","มีนา":"6902055","โมมีนา":"6902055","โมจิ":"6902055"};
+// เผื่อชื่อใน POS / ชื่อ sheet กะ เป็นอังกฤษ แต่ต้องแสดงเป็นชื่อเล่นไทย
+const NICK_ALIAS={"chayuta":"ขวัญ"};
 // พนักงานที่ไม่มี OT — ตัดออกจากระบบ
 const EXCLUDE_IDS=new Set(["690626","690622","6901005","6902049","680617"]);
+function aliasNick(s){const raw=String(s||"").trim();return NICK_ALIAS[raw.toLowerCase()]||raw;}
 function normTH(s){return String(s||"").replace(/^(น\.ส\.|นาย|นาง)\s*/,"").replace(/[ัิ-ฺ็-๎\s]/g,"");}
+function normKey(s){return normTH(aliasNick(s)).toLowerCase();}
 function lev(a,b){const m=a.length,n=b.length,d=[...Array(m+1)].map((_,i)=>[i,...Array(n).fill(0)]);for(let j=0;j<=n;j++)d[0][j]=j;
   for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]==b[j-1]?0:1));return d[m][n];}
 function matchNick(nick){
+  nick=aliasNick(nick);
   if(ALIAS_FIX[nick]&&MASTER[ALIAS_FIX[nick]])return ALIAS_FIX[nick];
   const ids=Object.keys(MASTER).filter(id=>!EXCLUDE_IDS.has(id));
   let f=ids.find(id=>MASTER[id].nick===nick);if(f)return f;
-  const n=normTH(nick);if(!n)return null;
-  f=ids.find(id=>normTH(MASTER[id].nick)===n);if(f)return f;
-  f=ids.find(id=>{const nm=normTH(MASTER[id].name);return n.length>=2&&nm.includes(n);});if(f)return f;
-  f=ids.find(id=>{const m=normTH(MASTER[id].nick);return m&&Math.abs(m.length-n.length)<=1&&lev(m,n)<=1;});if(f)return f;
+  const n=normKey(nick);if(!n)return null;
+  f=ids.find(id=>normKey(MASTER[id].nick)===n);if(f)return f;
+  f=ids.find(id=>{const nm=normKey(MASTER[id].name);return n.length>=2&&nm.includes(n);});if(f)return f;
+  f=(EMPS||[]).find(e=>normKey(e.eng)===n||normKey(nickOf(e.id))===n);if(f)return f.id;
+  f=ids.find(id=>{const m=normKey(MASTER[id].nick);return m&&Math.abs(m.length-n.length)<=1&&lev(m,n)<=1;});if(f)return f;
   return null;
 }
 
@@ -486,6 +492,15 @@ function parseShiftFile(wb,fname){
     });
     EMPS.push({id,eng,sheet:sn,days});
   });
+  EMPS.forEach(e=>{
+    const aliased=aliasNick(e.eng);
+    if(aliased&&aliased!==e.eng){
+      MASTER[e.id]={...(MASTER[e.id]||{}),nick:aliased,name:aliased,position:(MASTER[e.id]||{}).position||($('#position').value||'')};
+      NAMES[e.id]=aliased;
+    }
+  });
+  Object.keys(DATA).forEach(nick=>{if(!MAP[nick]){const g=matchNick(nick);if(g)MAP[nick]=g;}});
+  save('jc_names',NAMES);save('jc_map',MAP);
   // detect month from shift days if POS not loaded
   if(!$('#month').value&&EMPS.length){
     const k=Object.keys(EMPS[0].days)[0]; if(k){const[y,mo]=k.split('-');$('#month').value=y+'-'+String(mo).padStart(2,'0');}
