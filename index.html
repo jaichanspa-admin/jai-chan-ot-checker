@@ -297,6 +297,8 @@ const ROSTER={
 const ALIAS_FIX={"น้ำฝน":"680602","วีนา":"690627","มีนา":"6902055","โมมีนา":"6902055","โมจิ":"6902055","ขวัญ":"690632"};
 // เผื่อชื่อใน POS / ชื่อ sheet กะ เป็นอังกฤษ แต่ต้องแสดงเป็นชื่อเล่นไทย
 const NICK_ALIAS={"chayuta":"ขวัญ","kwan":"ขวัญ"};
+// ชื่อแสดงผลจริง ทับ cache เก่าที่อาจเคยจำเป็นชื่อเล่น
+const NAME_FIX={"690632":"ชยุตา พรจตุรภัทร"};
 // พนักงานที่ไม่มี OT — ตัดออกจากระบบ
 const EXCLUDE_IDS=new Set(["690626","690622","6901005","6902049","680617"]);
 function aliasNick(s){const raw=String(s||"").trim();return NICK_ALIAS[raw.toLowerCase()]||raw;}
@@ -327,6 +329,8 @@ let CODEMAP={}, EMPS=[];      // shift file: code->[s,e], employees
 let MASTER=Object.fromEntries(Object.entries(ROSTER).map(([k,v])=>[k,{...v}])); // empId -> {nick,name,position}
 let MAP=load('jc_map',{});    // nickname -> empId
 let NAMES=load('jc_names',{});// empId -> fullName override
+Object.entries(NAME_FIX).forEach(([id,name])=>{NAMES[id]=name;if(MASTER[id])MASTER[id].name=name;});
+save('jc_names',NAMES);
 let CUR=null, ROWS=[];
 
 const $=s=>document.querySelector(s);
@@ -501,8 +505,10 @@ function parseShiftFile(wb,fname){
   EMPS.forEach(e=>{
     const aliased=aliasNick(e.eng);
     if(aliased&&aliased!==e.eng){
-      MASTER[e.id]={...(MASTER[e.id]||{}),nick:aliased,name:aliased,position:(MASTER[e.id]||{}).position||($('#position').value||'')};
-      NAMES[e.id]=aliased;
+      const current=MASTER[e.id]||{};
+      const realName=NAME_FIX[e.id]||(!isJunk(current.name)?current.name:aliased);
+      MASTER[e.id]={...current,nick:aliased,name:realName,position:current.position||($('#position').value||'')};
+      NAMES[e.id]=realName;
     }
   });
   Object.keys(DATA).forEach(autoMapNick);
@@ -516,7 +522,7 @@ function parseShiftFile(wb,fname){
 }
 
 function empById(id){return EMPS.find(e=>e.id===id);}
-function fullNameFor(id,eng){return (!isJunk(NAMES[id])?NAMES[id]:'')||(MASTER[id]&&!isJunk(MASTER[id].name)?MASTER[id].name:'')||eng||id;}
+function fullNameFor(id,eng){return NAME_FIX[id]||(!isJunk(NAMES[id])?NAMES[id]:'')||(MASTER[id]&&!isJunk(MASTER[id].name)?MASTER[id].name:'')||eng||id;}
 function nickOf(id){return MASTER[id]&&!isJunk(MASTER[id].nick)?MASTER[id].nick:'';}
 // รายชื่อสำหรับ dropdown จับคู่ = รวมจากไฟล์กะ + ฐานข้อมูลในตัว
 function empUniverse(){
