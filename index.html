@@ -291,10 +291,11 @@ const ROSTER={
 "690629":{nick:"แต้ว",name:"น.ส. วรางคณา เอี่ยมจิตต์",position:"Receptionist"},
 "690630":{nick:"ไค",name:"นาย กัลยากฤต รัตนยะนนท์",position:"Therapist"},
 "690631":{nick:"นิสา",name:"น.ส. ปาณิสา ยานะสอน",position:"Therapist"},
-"690632":{nick:"ขวัญ",name:"ชยุตา พรจตุรภัทร",position:"Therapist"}
+"690632":{nick:"ขวัญ",name:"ชยุตา พรจตุรภัทร",position:"Therapist"},
+"690635":{nick:"กุ๊กไก่",name:"ปาริฉัตร กันรัมย์",position:"Therapist"}
 };
 // เผื่อชื่อเล่นใน POS ต่างจากทะเบียน (แก้คู่ตายตัว)
-const ALIAS_FIX={"น้ำฝน":"680602","วีนา":"690627","มีนา":"6902055","โมมีนา":"6902055","โมจิ":"6902055","ขวัญ":"690632"};
+const ALIAS_FIX={"น้ำฝน":"680602","วีนา":"690627","มีนา":"6902055","โมมีนา":"6902055","โมจิ":"6902055","ขวัญ":"690632","กุ๊กไก่":"690635"};
 // เผื่อชื่อใน POS / ชื่อ sheet กะ เป็นอังกฤษ แต่ต้องแสดงเป็นชื่อเล่นไทย
 const NICK_ALIAS={"chayuta":"ขวัญ","kwan":"ขวัญ"};
 // ชื่อแสดงผลจริง ทับ cache เก่าที่อาจเคยจำเป็นชื่อเล่น
@@ -320,6 +321,8 @@ function matchNick(nick){
   return null;
 }
 function autoMapNick(nick){
+  const fixed=ALIAS_FIX[aliasNick(nick)];
+  if(fixed&&MASTER[fixed]){MAP[nick]=fixed;return;}
   const g=matchNick(nick);
   if(g&&(!MAP[nick]||hasNickAlias(nick)))MAP[nick]=g;
 }
