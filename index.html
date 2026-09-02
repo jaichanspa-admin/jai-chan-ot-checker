@@ -65,6 +65,7 @@ table.edit textarea{resize:vertical;min-height:30px;line-height:1.35}
 .tag.auto{background:#e6f0ea;color:var(--ok)}
 .tag.man{background:#f4e6e0;color:var(--warn)}
 .tag.add{background:#fdf3d8;color:var(--old)}
+.tag.scan{background:#e8eef7;color:#2f5f98}
 details.help{margin-top:10px}
 details.help summary{cursor:pointer;color:var(--accent);font-size:13px}
 .empty{padding:30px;text-align:center;color:var(--muted)}
@@ -117,7 +118,7 @@ table.dash td.num{text-align:right;font-variant-numeric:tabular-nums}
     <div class="logo">JC</div>
     <div>
       <h1>Jai Chan · ระบบช่วยทำฟอร์มเบิกค่าล่วงเวลา (OT)</h1>
-      <div class="sub">อัปโหลดรายงาน POS + ไฟล์กะ → ดึงบริการรอบสุดท้าย/กะ คำนวณ OT → ตรวจ → ปริ้น A4 · เก็บประวัติคุมค่าใช้จ่าย</div>
+      <div class="sub">อัปโหลดรายงาน POS + ไฟล์กะ + สแกนนิ้ว → ดึงบริการรอบสุดท้าย/เวลาออกจริง คำนวณ OT → ตรวจ → ปริ้น A4 · เก็บประวัติคุมค่าใช้จ่าย</div>
     </div>
     <div class="nav">
       <button id="navForm" class="on" onclick="showView('form')">ทำฟอร์ม</button>
@@ -147,6 +148,15 @@ table.dash td.num{text-align:right;font-variant-numeric:tabular-nums}
           <input id="fileShift" type="file" accept=".xlsx,.xls" style="display:none">
         </div>
         <div id="infoShift" class="hint" style="margin-top:6px"></div>
+      </div>
+      <div>
+        <div id="dropTime" class="drop">
+          <div style="font-size:26px">⏱️</div>
+          <div><b>ไฟล์สแกนนิ้ว (.xlsx)</b></div>
+          <div class="hint">BplusData เช่น time_Officer / time_Therapist · อัปได้หลายไฟล์</div>
+          <input id="fileTime" type="file" accept=".xlsx,.xls" multiple style="display:none">
+        </div>
+        <div id="infoTime" class="hint" style="margin-top:6px"></div>
       </div>
       <div>
         <div id="dropEmp" class="drop">
@@ -181,8 +191,8 @@ table.dash td.num{text-align:right;font-variant-numeric:tabular-nums}
       <label class="fld">อัตรา OT (บาท/ชม.)<input id="rate" type="number" min="0" step="1" placeholder="เช่น 60" style="width:120px"></label>
     </div>
     <details class="help" id="mapWrap">
-      <summary>จับคู่ชื่อในระบบ POS ↔ พนักงานในไฟล์กะ (ทำครั้งเดียว ระบบจำให้)</summary>
-      <div class="hint" style="margin:8px 0">ชื่อใน POS เป็นชื่อเล่น เลือกว่าตรงกับพนักงานคนไหนในไฟล์กะ เพื่อดึงกะรายวันมาอัตโนมัติ · <span style="color:var(--old)">⬤</span> = พนักงานชุดเก่า (OT อัตโนมัติวันละ 1 ชม.)</div>
+      <summary>จับคู่ชื่อในระบบ POS ↔ พนักงานในไฟล์กะ/สแกนนิ้ว (ทำครั้งเดียว ระบบจำให้)</summary>
+      <div class="hint" style="margin:8px 0">ชื่อใน POS เป็นชื่อเล่น เลือกว่าตรงกับพนักงานคนไหนเพื่อดึงกะรายวันและเวลาออกจริงมาอัตโนมัติ · <span style="color:var(--old)">⬤</span> = พนักงานชุดเก่า (OT อัตโนมัติวันละ 1 ชม.)</div>
       <table class="edit maptbl" id="mapTbl"><thead><tr><th>ชื่อใน POS</th><th>= พนักงานในไฟล์กะ</th></tr></thead><tbody></tbody></table>
     </details>
     <div class="people" id="people"></div>
@@ -191,7 +201,7 @@ table.dash td.num{text-align:right;font-variant-numeric:tabular-nums}
   <!-- STEP 3 -->
   <div class="panel" id="editPanel" style="display:none">
     <h2><span class="step">3</span> ตรวจ/แก้ไขฟอร์ม — <span id="curName" style="color:var(--ink)"></span></h2>
-    <div class="hint">แต่ละบรรทัด = บริการ <b>รอบสุดท้ายของวัน</b> · <span class="tag auto">auto</span> จาก POS · <span class="tag add">กะ</span> วันทำงานจากไฟล์กะ · ช่อง OT มี <b>เลขคำนวณให้แล้ว</b> (แก้ทับได้)</div>
+    <div class="hint">แต่ละบรรทัด = บริการ <b>รอบสุดท้ายของวัน</b> · <span class="tag auto">auto</span> จาก POS · <span class="tag scan">สแกน</span> จากเวลาออกจริง · <span class="tag add">กะ</span> วันทำงานจากไฟล์กะ · ช่อง OT มี <b>เลขคำนวณให้แล้ว</b> (แก้ทับได้)</div>
     <div id="oldNote" class="hint" style="color:var(--old);display:none">⬤ พนักงานชุดเก่า: ทุกวันทำงานได้ OT ขั้นต่ำ 1 ชม. แม้ไม่มีงานนวด — ติ๊ก "ขอกลับก่อน" ถ้าพนักงานขอกลับเอง (จะไม่ได้ OT ขั้นต่ำ)</div>
     <div class="toolbar">
       <button class="sm ghost" id="addRow">＋ เพิ่มบรรทัด</button>
@@ -292,16 +302,20 @@ const ROSTER={
 "690630":{nick:"ไค",name:"นาย กัลยากฤต รัตนยะนนท์",position:"Therapist"},
 "690631":{nick:"นิสา",name:"น.ส. ปาณิสา ยานะสอน",position:"Therapist"},
 "690632":{nick:"ขวัญ",name:"ชยุตา พรจตุรภัทร",position:"Therapist"},
-"690635":{nick:"กุ๊กไก่",name:"ปาริฉัตร กันรัมย์",position:"Therapist"}
+"690635":{nick:"กุ๊กไก่",name:"ปาริฉัตร กันรัมย์",position:"Therapist"},
+"690636":{nick:"Nink",name:"Dusita Auttamapokin",position:"Receptionist"},
+"690637":{nick:"Pook",name:"Nattaya Ketawalh",position:"Therapist"}
 };
 // เผื่อชื่อเล่นใน POS ต่างจากทะเบียน (แก้คู่ตายตัว)
-const ALIAS_FIX={"น้ำฝน":"680602","วีนา":"690627","มีนา":"6902055","โมมีนา":"6902055","โมจิ":"6902055","ขวัญ":"690632","กุ๊กไก่":"690635"};
+const ALIAS_FIX={"น้ำฝน":"680602","วีนา":"690627","มีนา":"6902055","โมมีนา":"6902055","โมจิ":"6902055","ขวัญ":"690632","กุ๊กไก่":"690635","Nink":"690636","Pook":"690637"};
 // เผื่อชื่อใน POS / ชื่อ sheet กะ เป็นอังกฤษ แต่ต้องแสดงเป็นชื่อเล่นไทย
-const NICK_ALIAS={"chayuta":"ขวัญ","kwan":"ขวัญ"};
+const NICK_ALIAS={"chayuta":"ขวัญ","kwan":"ขวัญ","nink":"Nink","pook":"Pook"};
 // ชื่อแสดงผลจริง ทับ cache เก่าที่อาจเคยจำเป็นชื่อเล่น
-const NAME_FIX={"690632":"ชยุตา พรจตุรภัทร"};
+const NAME_FIX={"690632":"ชยุตา พรจตุรภัทร","690636":"Dusita Auttamapokin","690637":"Nattaya Ketawalh"};
+const ID_REPLACED_BY={"680614":"690635"};
 // พนักงานที่ไม่มี OT — ตัดออกจากระบบ
 const EXCLUDE_IDS=new Set(["690626","690622","6901005","6902049","680617"]);
+function canonicalId(id){id=String(id||"").trim();return ID_REPLACED_BY[id]||id;}
 function aliasNick(s){const raw=String(s||"").trim();return NICK_ALIAS[raw.toLowerCase()]||raw;}
 function hasNickAlias(s){const raw=String(s||"").trim();return !!NICK_ALIAS[raw.toLowerCase()];}
 function normTH(s){return String(s||"").replace(/^(น\.ส\.|นาย|นาง)\s*/,"").replace(/[ัิ-ฺ็-๎\s]/g,"");}
@@ -310,18 +324,18 @@ function lev(a,b){const m=a.length,n=b.length,d=[...Array(m+1)].map((_,i)=>[i,..
   for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]==b[j-1]?0:1));return d[m][n];}
 function matchNick(nick){
   nick=aliasNick(nick);
-  if(ALIAS_FIX[nick]&&MASTER[ALIAS_FIX[nick]])return ALIAS_FIX[nick];
+  if(ALIAS_FIX[nick]&&MASTER[canonicalId(ALIAS_FIX[nick])])return canonicalId(ALIAS_FIX[nick]);
   const ids=Object.keys(MASTER).filter(id=>!EXCLUDE_IDS.has(id));
-  let f=ids.find(id=>MASTER[id].nick===nick);if(f)return f;
+  let f=ids.find(id=>MASTER[id].nick===nick);if(f)return canonicalId(f);
   const n=normKey(nick);if(!n)return null;
-  f=ids.find(id=>normKey(MASTER[id].nick)===n);if(f)return f;
-  f=ids.find(id=>{const nm=normKey(MASTER[id].name);return n.length>=2&&nm.includes(n);});if(f)return f;
-  f=(EMPS||[]).find(e=>normKey(e.eng)===n||normKey(nickOf(e.id))===n);if(f)return f.id;
-  f=ids.find(id=>{const m=normKey(MASTER[id].nick);return m&&Math.abs(m.length-n.length)<=1&&lev(m,n)<=1;});if(f)return f;
+  f=ids.find(id=>normKey(MASTER[id].nick)===n);if(f)return canonicalId(f);
+  f=ids.find(id=>{const nm=normKey(MASTER[id].name);return n.length>=2&&nm.includes(n);});if(f)return canonicalId(f);
+  f=(EMPS||[]).find(e=>normKey(e.eng)===n||normKey(nickOf(e.id))===n);if(f)return canonicalId(f.id);
+  f=ids.find(id=>{const m=normKey(MASTER[id].nick);return m&&Math.abs(m.length-n.length)<=1&&lev(m,n)<=1;});if(f)return canonicalId(f);
   return null;
 }
 function autoMapNick(nick){
-  const fixed=ALIAS_FIX[aliasNick(nick)];
+  const fixed=canonicalId(ALIAS_FIX[aliasNick(nick)]);
   if(fixed&&MASTER[fixed]){MAP[nick]=fixed;return;}
   const g=matchNick(nick);
   if(g&&(!MAP[nick]||hasNickAlias(nick)))MAP[nick]=g;
@@ -329,11 +343,13 @@ function autoMapNick(nick){
 
 let RAW=[], DATA={};          // POS
 let CODEMAP={}, EMPS=[];      // shift file: code->[s,e], employees
+let ATTS=[], ATT={};          // time clock: empId -> date -> scan detail
 let MASTER=Object.fromEntries(Object.entries(ROSTER).map(([k,v])=>[k,{...v}])); // empId -> {nick,name,position}
 let MAP=load('jc_map',{});    // nickname -> empId
 let NAMES=load('jc_names',{});// empId -> fullName override
+Object.keys(MAP).forEach(nick=>{MAP[nick]=canonicalId(MAP[nick]);});
 Object.entries(NAME_FIX).forEach(([id,name])=>{NAMES[id]=name;if(MASTER[id])MASTER[id].name=name;});
-save('jc_names',NAMES);
+save('jc_names',NAMES);save('jc_map',MAP);
 let CUR=null, ROWS=[];
 
 const $=s=>document.querySelector(s);
@@ -359,11 +375,12 @@ $('#round').addEventListener('change',e=>{save('jc_round',e.target.value);if(CUR
 /* ---------- drop wiring ---------- */
 function wireDrop(dropId,inputId,handler){
   const d=$(dropId),f=$(inputId);
+  const pass=files=>handler(f.multiple?Array.from(files):files[0],d);
   d.onclick=()=>f.click();
   d.ondragover=e=>{e.preventDefault();d.classList.add('drag')};
   d.ondragleave=()=>d.classList.remove('drag');
-  d.ondrop=e=>{e.preventDefault();d.classList.remove('drag');if(e.dataTransfer.files[0])handler(e.dataTransfer.files[0],d)};
-  f.onchange=e=>{if(e.target.files[0])handler(e.target.files[0],d)};
+  d.ondrop=e=>{e.preventDefault();d.classList.remove('drag');if(e.dataTransfer.files[0])pass(e.dataTransfer.files)};
+  f.onchange=e=>{if(e.target.files[0])pass(e.target.files)};
 }
 function readWb(f,cb,err){
   const r=new FileReader();
@@ -372,6 +389,7 @@ function readWb(f,cb,err){
 }
 wireDrop('#dropPos','#filePos',(f,d)=>readWb(f,wb=>{parsePOS(wb,f.name);d.classList.add('done')},e=>$('#infoPos').innerHTML='<span style="color:var(--warn)">อ่านไม่ได้: '+e.message+'</span>'));
 wireDrop('#dropShift','#fileShift',(f,d)=>readWb(f,wb=>{parseShiftFile(wb,f.name);d.classList.add('done')},e=>$('#infoShift').innerHTML='<span style="color:var(--warn)">อ่านไม่ได้: '+e.message+'</span>'));
+wireDrop('#dropTime','#fileTime',(files,d)=>readTimeFiles(files,d));
 wireDrop('#dropEmp','#fileEmp',(f,d)=>{
   if(/\.csv$/i.test(f.name)){
     const r=new FileReader();
@@ -382,6 +400,25 @@ wireDrop('#dropEmp','#fileEmp',(f,d)=>{
       e=>$('#infoEmp').innerHTML='<span style="color:var(--warn)">อ่านไม่ได้: '+e.message+'</span>');
   }
 });
+function readTimeFiles(files,d){
+  const list=(Array.isArray(files)?files:[files]).filter(Boolean);
+  if(!list.length)return;
+  let pending=list.length, ok=0, fail=[];
+  list.forEach(f=>readWb(f,wb=>{
+    try{parseAttendanceFile(wb,f.name);ok++;}
+    catch(e){fail.push(f.name+': '+e.message);}
+    if(--pending===0)finish();
+  },e=>{
+    fail.push(f.name+': '+e.message);
+    if(--pending===0)finish();
+  }));
+  function finish(){
+    if(ok)d.classList.add('done');
+    const msg='✅ ไฟล์สแกนนิ้ว '+ok+' ไฟล์ · รายการ '+ATTS.length+' แถว · ออกจริง '+ATTS.filter(a=>a.out!=null).length+' แถว';
+    $('#infoTime').innerHTML=msg+(fail.length?' <span style="color:var(--warn)">อ่านไม่ได้ '+fail.join(' / ')+'</span>':'');
+    ready();renderPeople();if(CURP)buildRows();
+  }
+}
 function decodeBuf(buf){
   const tries=['utf-8','utf-16le','utf-16be','windows-874'];let best='',bs=-1;
   for(const enc of tries){try{
@@ -430,7 +467,7 @@ function parseEmpMaster(grid,fname){
   ready();renderMap();renderPeople();if(CURP)buildRows();
 }
 function isJunk(s){s=String(s||'').trim();return !s||/^[?.\s]+$/.test(s);}
-function positionFor(id){return (id&&MASTER[id]&&!isJunk(MASTER[id].position))?MASTER[id].position:($('#position').value||'');}
+function positionFor(id){id=canonicalId(id);return (id&&MASTER[id]&&!isJunk(MASTER[id].position))?MASTER[id].position:($('#position').value||'');}
 
 /* ---------- time helpers ---------- */
 function hm(t){
@@ -456,6 +493,9 @@ function isOff(code){const c=String(code||'').trim().toUpperCase();return c===''
 /* ---------- parse POS ---------- */
 function normDate(d){
   if(d instanceof Date)return{day:d.getDate(),mon:d.getMonth()+1,year:d.getFullYear()};
+  if(typeof d==='number'&&d>20000&&typeof XLSX!=='undefined'&&XLSX.SSF&&XLSX.SSF.parse_date_code){
+    const x=XLSX.SSF.parse_date_code(d); if(x)return{day:x.d,mon:x.m,year:x.y};
+  }
   const m=String(d).trim().match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   return m?{day:+m[1],mon:+m[2],year:+m[3]}:{day:null};
 }
@@ -481,6 +521,47 @@ function parsePOS(wb,fname){
   save('jc_map',MAP);
   $('#infoPos').innerHTML='✅ <b>'+fname+'</b> · '+RAW.length+' รายการ · '+Object.keys(DATA).length+' ชื่อ';
   ready();
+}
+
+/* ---------- parse TIME CLOCK FILE ---------- */
+function cleanText(s){return String(s||'').trim().replace(/\s+/g,' ');}
+function dec(v){if(v==null||v==='')return null;const n=parseFloat(String(v).replace(',','.'));return Number.isFinite(n)?n:null;}
+function ymd(dt){return dt.year+'-'+dt.mon+'-'+dt.day;}
+function scanTimes(detail){return (String(detail||'').match(/\b\d{1,2}[:.]\d{2}\b/g)||[]).map(hm).filter(v=>v!=null);}
+function upsertAttendance(rec){
+  rec.id=canonicalId(rec.id);
+  ATT[rec.id]=ATT[rec.id]||{};
+  const old=ATT[rec.id][rec.key];
+  if(!old||(rec.out??-1)>(old.out??-1)||(!old.out&&rec.out!=null))ATT[rec.id][rec.key]=rec;
+}
+function refreshAttendanceList(){ATTS=Object.values(ATT).flatMap(days=>Object.values(days));}
+function parseAttendanceFile(wb,fname){
+  const sh=wb.SheetNames.find(n=>n.replace(/\s/g,'')==='BplusData')||wb.SheetNames[0];
+  const arr=XLSX.utils.sheet_to_json(wb.Sheets[sh],{header:1,raw:true,defval:''});
+  const hi=arr.findIndex(r=>r.some(c=>String(c).trim()==='รหัส')&&r.some(c=>String(c).trim()==='วันที่')&&r.some(c=>String(c).includes('รายละเอียดเวลารูดบัตร')));
+  if(hi<0)throw new Error('ไม่พบหัวคอลัมน์ BplusData');
+  const H=arr[hi].map(c=>String(c).trim());
+  const exact=name=>H.findIndex(h=>h===name);
+  const incl=(...keys)=>H.findIndex(h=>keys.some(k=>h.toLowerCase().includes(k.toLowerCase())));
+  const cId=exact('รหัส'),cName=exact('ชื่อพนักงาน'),cDate=exact('วันที่'),cCode=exact('รหัสกะ'),cDetail=incl('รายละเอียดเวลารูดบัตร'),
+        cEarly=exact('กลับก่อน'),cOt=exact('ล่วงเวลา');
+  if(cId<0||cDate<0||cDetail<0)throw new Error('คอลัมน์ไม่ครบ (รหัส/วันที่/รายละเอียดเวลารูดบัตร)');
+  let added=0,out=0;
+  arr.slice(hi+1).forEach(r=>{
+    const rawId=String(r[cId]||'').trim().replace(/\.0$/,''); if(!/^\d+$/.test(rawId))return;
+    const id=canonicalId(rawId),dt=normDate(r[cDate]); if(!dt.day)return;
+    const detail=cleanText(r[cDetail]),times=scanTimes(detail),name=cName>=0?cleanText(r[cName]):'';
+    const rec={id,key:ymd(dt),dt,name,code:cCode>=0?cleanText(r[cCode]):'',detail,
+      in:times.length?times[0]:null,out:times.length>1?times[times.length-1]:null,
+      early:cEarly>=0?dec(r[cEarly]):null,bplusOT:cOt>=0?dec(r[cOt]):null,file:fname};
+    upsertAttendance(rec);added++;if(rec.out!=null)out++;
+    if(!MASTER[id])MASTER[id]={nick:'',name:NAME_FIX[id]||name,position:''};
+    if(name&&!NAME_FIX[id]&&isJunk(MASTER[id].name)){MASTER[id].name=name;NAMES[id]=name;}
+  });
+  refreshAttendanceList();save('jc_names',NAMES);
+  const months={};ATTS.forEach(x=>{months[x.dt.year+'-'+String(x.dt.mon).padStart(2,'0')]=1;});
+  const mk=Object.keys(months).sort().pop(); if(mk&&!$('#month').value)$('#month').value=mk;
+  return{added,out};
 }
 
 /* ---------- parse SHIFT FILE ---------- */
@@ -524,18 +605,18 @@ function parseShiftFile(wb,fname){
   ready();
 }
 
-function empById(id){return EMPS.find(e=>e.id===id);}
-function fullNameFor(id,eng){return NAME_FIX[id]||(!isJunk(NAMES[id])?NAMES[id]:'')||(MASTER[id]&&!isJunk(MASTER[id].name)?MASTER[id].name:'')||eng||id;}
-function nickOf(id){return MASTER[id]&&!isJunk(MASTER[id].nick)?MASTER[id].nick:'';}
+function empById(id){const cid=canonicalId(id);return EMPS.find(e=>canonicalId(e.id)===cid);}
+function fullNameFor(id,eng){id=canonicalId(id);return NAME_FIX[id]||(!isJunk(NAMES[id])?NAMES[id]:'')||(MASTER[id]&&!isJunk(MASTER[id].name)?MASTER[id].name:'')||eng||id;}
+function nickOf(id){id=canonicalId(id);return MASTER[id]&&!isJunk(MASTER[id].nick)?MASTER[id].nick:'';}
 // รายชื่อสำหรับ dropdown จับคู่ = รวมจากไฟล์กะ + ฐานข้อมูลในตัว
 function empUniverse(){
-  const ids=new Set([...EMPS.map(e=>e.id),...Object.keys(MASTER)]);
+  const ids=new Set([...EMPS.map(e=>canonicalId(e.id)),...Object.keys(MASTER).map(canonicalId),...ATTS.map(a=>canonicalId(a.id))]);
   return [...ids].filter(id=>!EXCLUDE_IDS.has(id)).sort().map(id=>({id,label:fullNameFor(id,(empById(id)||{}).eng),nick:nickOf(id),old:isOldId(id),pos:(MASTER[id]||{}).position||''}));
 }
 
 /* ---------- ready / people ---------- */
 function ready(){
-  if(!RAW.length&&!EMPS.length)return;
+  if(!RAW.length&&!EMPS.length&&!ATTS.length)return;
   $('#cfgPanel').style.display='';
   renderMap();renderPeople();
 }
@@ -560,9 +641,15 @@ function renderMap(){
 // canonical people: prefer shift employees; else POS nicknames
 function peopleList(){
   if(EMPS.length){
-    return EMPS.filter(e=>!EXCLUDE_IDS.has(e.id)).map(e=>{const nicks=nicknamesForEmp(e.id);return{id:e.id,label:fullNameFor(e.id,e.eng),emp:e,nick:nicks[0]||null,nicks,old:isOldId(e.id)};});
+    const seen=new Set(),out=[];
+    EMPS.filter(e=>!EXCLUDE_IDS.has(canonicalId(e.id))).forEach(e=>{const id=canonicalId(e.id);if(seen.has(id))return;seen.add(id);const nicks=nicknamesForEmp(id);out.push({id,label:fullNameFor(id,e.eng),emp:e,nick:nicks[0]||null,nicks,old:isOldId(id)});});
+    [...new Set(ATTS.map(a=>canonicalId(a.id)))].filter(id=>!EXCLUDE_IDS.has(id)&&!seen.has(id)).sort().forEach(id=>{seen.add(id);out.push({id,label:fullNameFor(id,''),emp:null,nick:nickOf(id),nicks:nickOf(id)?[nickOf(id)]:[],old:isOldId(id)});});
+    return out;
   }
-  return Object.keys(DATA).filter(n=>!EXCLUDE_IDS.has(MAP[n]||matchNick(n))).sort().map(n=>{const id=MAP[n]||matchNick(n)||null;return{id,label:id?fullNameFor(id,n):n,nick:n,nicks:[n],emp:null,old:isOldId(id)};});
+  const seen=new Set(),out=[];
+  Object.keys(DATA).filter(n=>!EXCLUDE_IDS.has(MAP[n]||matchNick(n))).sort().forEach(n=>{const id=MAP[n]||matchNick(n)||null,key=id||n;if(seen.has(key))return;seen.add(key);out.push({id,label:id?fullNameFor(id,n):n,nick:n,nicks:[n],emp:null,old:isOldId(id)});});
+  [...new Set(ATTS.map(a=>canonicalId(a.id)))].filter(id=>!EXCLUDE_IDS.has(id)&&!seen.has(id)).sort().forEach(id=>{seen.add(id);out.push({id,label:fullNameFor(id,''),nick:nickOf(id),nicks:nickOf(id)?[nickOf(id)]:[],emp:null,old:isOldId(id)});});
+  return out;
 }
 function nicknamesForEmp(id){
   const nicks=Object.keys(MAP).filter(n=>MAP[n]===id);
@@ -593,6 +680,18 @@ function periodRange(){
 function periodKey(){const pr=periodRange();return pr?pr.y+'-'+pr.m+'-'+pr.half:'';}
 function periodLabel(){const pr=periodRange();return pr?pr.from+'–'+pr.to+' '+THAI_ABBR[pr.m-1]+' '+(pr.y+543):'';}
 
+/* ---------- attendance by day ---------- */
+function attendanceFor(id,day){
+  const pr=periodRange();if(!pr)return null;
+  return (ATT[canonicalId(id)]||{})[pr.y+'-'+pr.m+'-'+day]||null;
+}
+function attendanceDays(id){
+  const pr=periodRange();if(!pr)return{};
+  const out={};
+  Object.values(ATT[canonicalId(id)]||{}).forEach(a=>{if(a.dt.year===pr.y&&a.dt.mon===pr.m&&a.dt.day>=pr.from&&a.dt.day<=pr.to)out[a.dt.day]=a;});
+  return out;
+}
+
 /* ---------- POS last rounds for a nickname ---------- */
 function posByDay(nick){
   const pr=periodRange(),out={},nicks=Array.isArray(nick)?nick.filter(Boolean):[nick].filter(Boolean);if(!pr||!nicks.length)return out;
@@ -613,6 +712,17 @@ function calcOT(start,end,code){
   let diff=end-sh[1];if(diff<=0)return 0;
   return ($('#round').value==='floor'?Math.floor(diff/30):Math.round(diff/30))*0.5;
 }
+function calcRowBase(r){
+  const end=(r.scanOut!=null&&r.end!=null)?Math.min(r.end,r.scanOut):(r.end!=null?r.end:r.scanOut);
+  return calcOT(r.start,end,r.shift);
+}
+function calcLabel(r){
+  const parts=[(r.old?'ขั้นต่ำ1·คำนวณ ':'คำนวณ ')+r.base];
+  if(r.scanOut!=null)parts.push('สแกนออก '+toHM(r.scanOut));
+  if(r.scanOT!=null)parts.push('สแกน OT '+r.scanOT);
+  if(r.bplusOT!=null)parts.push('Bplus '+r.bplusOT);
+  return parts.join(' · ');
+}
 
 let CURP=null;
 function selectPerson(p,btn){
@@ -630,6 +740,7 @@ function buildRows(){
 function computeRows(p){
   const pr=periodRange();if(!pr)return[];
   const pos=posByDay(p.nicks||p.nick);
+  const attDays=attendanceDays(p.id);
   const days=new Set();
   // shift working days
   if(p.emp){
@@ -638,15 +749,20 @@ function computeRows(p){
     }
   }
   Object.keys(pos).forEach(d=>days.add(+d));
+  Object.values(attDays).forEach(a=>{const scanOT=a.out!=null?calcOT(a.in,a.out,a.code):0;if(scanOT>0||(a.bplusOT||0)>0)days.add(a.dt.day);});
   return[...days].sort((a,b)=>a-b).map(d=>{
-    const code=p.emp?(p.emp.days[pr.y+'-'+pr.m+'-'+d]||''):'' ;
+    const att=attendanceFor(p.id,d);
+    let code=p.emp?(p.emp.days[pr.y+'-'+pr.m+'-'+d]||''):(att?att.code:'') ;
+    if((!code||isOff(code))&&att&&att.code&&!isOff(att.code))code=att.code;
     const pp=pos[d];
-    const start=pp?pp.start:null,end=pp?pp.end:null;
-    const base=calcOT(start,end,code);
-    let ot=base,leftEarly=false;
-    if(p.old){ot=Math.max(1,base);}
-    const src=pp?'auto':(p.emp?'shift':'man');
-    return{day:d,desc:pp?pp.desc:'',start,end,shift:code,base,ot,old:p.old,leftEarly,src};
+    const start=pp?pp.start:(att?att.in:null),end=pp?pp.end:(att?att.out:null);
+    const scanOut=att?att.out:null,scanOT=att&&att.out!=null?calcOT(att.in,att.out,code||att.code):null,bplusOT=att?att.bplusOT:null;
+    const row={day:d,desc:pp?pp.desc:(att&&att.out!=null?'สแกนนิ้วออกจริง '+toHM(att.out):''),start,end,shift:code,scanOut,scanOT,bplusOT,base:0,ot:0,old:p.old,leftEarly:false,src:pp?(att?'auto':'auto'):(att?'scan':(p.emp?'shift':'man'))};
+    row.base=calcRowBase(row);
+    let ot=row.base,leftEarly=false;
+    if(p.old){ot=Math.max(1,row.base);}
+    row.ot=ot;row.leftEarly=leftEarly;
+    return row;
   });
 }
 function rowOT(r){return r.old?(r.leftEarly?r.base:Math.max(1,r.base)):r.base;}
@@ -656,9 +772,9 @@ function renderRows(){
   if(!ROWS.length){tb.innerHTML='<tr><td colspan="6" class="empty">ไม่พบวันทำงานในรอบนี้ — กด "เพิ่มบรรทัด"</td></tr>';updateTotal();return;}
   ROWS.forEach((r,i)=>{
     const tr=el('tr');
-    const tag=r.src==='auto'?'<span class="tag auto">auto</span>':(r.src==='shift'?'<span class="tag add">กะ</span>':'<span class="tag man">แก้มือ</span>');
+    const tag=r.src==='auto'?'<span class="tag auto">auto</span>':(r.src==='scan'?'<span class="tag scan">สแกน</span>':(r.src==='shift'?'<span class="tag add">กะ</span>':'<span class="tag man">แก้มือ</span>'));
     const le=r.old?'<label class="le"><input type="checkbox" '+(r.leftEarly?'checked':'')+'> ขอกลับก่อน</label>':'';
-    const calcLbl=r.old?('ขั้นต่ำ1·คำนวณ '+r.base):('คำนวณ '+r.base);
+    const calcLbl=calcLabel(r);
     tr.innerHTML=
       '<td class="dt"><input value="'+(r.day||'')+'" style="width:42px;text-align:center"></td>'+
       '<td><textarea rows="1">'+String(r.desc).replace(/</g,'&lt;')+'</textarea><div style="margin-top:2px">'+tag+'</div></td>'+
@@ -669,8 +785,8 @@ function renderRows(){
     const q=s=>tr.querySelector(s);
     q('.dt input').oninput=e=>{r.day=e.target.value;r.src='man'};
     q('textarea').oninput=e=>{r.desc=e.target.value;r.src='man'};
-    q('.tm input').oninput=e=>{const m=e.target.value.match(/(\d{1,2}[:.]\d{2})\s*[-–]\s*(\d{1,2}[:.]\d{2})/);if(m){r.start=hm(m[1]);r.end=hm(m[2]);}r.base=calcOT(r.start,r.end,r.shift);r.ot=rowOT(r);refreshRow(tr,r);r.src='man';};
-    q('.sh input').oninput=e=>{r.shift=e.target.value;r.base=calcOT(r.start,r.end,r.shift);r.ot=rowOT(r);refreshRow(tr,r);r.src='man';};
+    q('.tm input').oninput=e=>{const m=e.target.value.match(/(\d{1,2}[:.]\d{2})\s*[-–]\s*(\d{1,2}[:.]\d{2})/);if(m){r.start=hm(m[1]);r.end=hm(m[2]);}r.base=calcRowBase(r);r.ot=rowOT(r);refreshRow(tr,r);r.src='man';};
+    q('.sh input').oninput=e=>{r.shift=e.target.value;r.base=calcRowBase(r);r.ot=rowOT(r);refreshRow(tr,r);r.src='man';};
     q('.ot input').oninput=e=>{r.ot=parseFloat(e.target.value)||0;updateTotal();};
     if(r.old)q('.le input').onchange=e=>{r.leftEarly=e.target.checked;r.ot=rowOT(r);refreshRow(tr,r);};
     q('.danger').onclick=()=>{ROWS.splice(i,1);renderRows();};
@@ -678,7 +794,7 @@ function renderRows(){
   });
   updateTotal();
 }
-function refreshRow(tr,r){tr.querySelector('.ot input').value=r.ot;tr.querySelector('.otcalc').textContent=(r.old?'ขั้นต่ำ1·คำนวณ ':'คำนวณ ')+r.base;updateTotal();}
+function refreshRow(tr,r){tr.querySelector('.ot input').value=r.ot;tr.querySelector('.otcalc').textContent=calcLabel(r);updateTotal();}
 function totalOT(){return +ROWS.reduce((s,r)=>s+(parseFloat(r.ot)||0),0).toFixed(2);}
 function updateTotal(){
   const t=totalOT();$('#totHrs').textContent=t;
@@ -686,8 +802,8 @@ function updateTotal(){
   $('#totBaht').textContent=rate?('≈ '+(t*rate).toLocaleString()+' บาท'):'';
 }
 
-$('#addRow').onclick=()=>{ROWS.push({day:'',desc:'',start:null,end:null,shift:CURP&&CURP.emp?'':'' ,base:0,ot:0,old:CURP&&CURP.old,leftEarly:false,src:'man'});renderRows();};
-$('#recalc').onclick=()=>{ROWS.forEach(r=>{r.base=calcOT(r.start,r.end,r.shift);r.ot=rowOT(r);});renderRows();};
+$('#addRow').onclick=()=>{ROWS.push({day:'',desc:'',start:null,end:null,shift:CURP&&CURP.emp?'':'' ,scanOut:null,scanOT:null,bplusOT:null,base:0,ot:0,old:CURP&&CURP.old,leftEarly:false,src:'man'});renderRows();};
+$('#recalc').onclick=()=>{ROWS.forEach(r=>{r.base=calcRowBase(r);r.ot=rowOT(r);});renderRows();};
 ['#month','#half'].forEach(s=>$(s).addEventListener('change',()=>{if(CURP)buildRows();}));
 
 /* ---------- print ---------- */
