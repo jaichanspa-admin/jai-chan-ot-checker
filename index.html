@@ -95,6 +95,7 @@ table.dash td.num{text-align:right;font-variant-numeric:tabular-nums}
 .sheet table.form th,.sheet table.form td{border:1px solid #000;padding:5px 7px;font-size:13.5px}
 .sheet table.form th{background:#f0ece2;text-align:center;font-weight:700}
 .sheet table.form td.c{text-align:center;white-space:nowrap}
+.sheet table.form td.date{white-space:normal;line-height:1.25;font-size:12.5px}
 .sheet table.form td.desc{font-size:13px}
 .sheet .sumrow td{font-weight:700;text-align:right}
 .sheet .sumrow td.hh{text-align:center}
@@ -135,7 +136,7 @@ table.dash td.num{text-align:right;font-variant-numeric:tabular-nums}
         <div id="dropPos" class="drop">
           <div style="font-size:26px">📄</div>
           <div><b>รายงาน POS (.xlsx)</b></div>
-          <div class="hint">ลาก/คลิก — ดึงบริการรอบสุดท้ายของวันแต่ละคน</div>
+          <div class="hint">ลาก/คลิก — ดึงเวลาเริ่มบริการจริง + รอบสุดท้ายของวันแต่ละคน</div>
           <input id="filePos" type="file" accept=".xlsx,.xls" style="display:none">
         </div>
         <div id="infoPos" class="hint" style="margin-top:6px"></div>
@@ -201,7 +202,7 @@ table.dash td.num{text-align:right;font-variant-numeric:tabular-nums}
   <!-- STEP 3 -->
   <div class="panel" id="editPanel" style="display:none">
     <h2><span class="step">3</span> ตรวจ/แก้ไขฟอร์ม — <span id="curName" style="color:var(--ink)"></span></h2>
-    <div class="hint">แต่ละบรรทัด = บริการ <b>รอบสุดท้ายของวัน</b> · <span class="tag auto">auto</span> จาก POS · <span class="tag scan">สแกน</span> จากเวลาออกจริง · <span class="tag add">กะ</span> วันทำงานจากไฟล์กะ · ช่อง OT มี <b>เลขคำนวณให้แล้ว</b> (แก้ทับได้)</div>
+    <div class="hint">แต่ละบรรทัด = บริการ <b>รอบสุดท้ายของวัน</b> โดยใช้เวลาเริ่มบริการจริง · <span class="tag auto">auto</span> จาก POS · <span class="tag scan">สแกน</span> จากเวลาออกจริง · <span class="tag add">กะ</span> วันทำงานจากไฟล์กะ · ช่อง OT มี <b>เลขคำนวณให้แล้ว</b> (แก้ทับได้)</div>
     <div id="oldNote" class="hint" style="color:var(--old);display:none">⬤ พนักงานชุดเก่า: ทุกวันทำงานได้ OT ขั้นต่ำ 1 ชม. แม้ไม่มีงานนวด — ติ๊ก "ขอกลับก่อน" ถ้าพนักงานขอกลับเอง (จะไม่ได้ OT ขั้นต่ำ)</div>
     <div class="toolbar">
       <button class="sm ghost" id="addRow">＋ เพิ่มบรรทัด</button>
@@ -213,7 +214,7 @@ table.dash td.num{text-align:right;font-variant-numeric:tabular-nums}
     <table class="edit"><thead><tr>
       <th class="dt">วันที่</th>
       <th>อธิบายงานที่ทำล่วงเวลา (บริการรอบสุดท้าย)</th>
-      <th class="tm">เวลา</th>
+      <th class="tm">เวลาเริ่ม-สิ้นสุด</th>
       <th class="sh">กะ</th>
       <th style="width:90px">OT (ชม.)</th>
       <th style="width:40px"></th>
@@ -472,6 +473,7 @@ function positionFor(id){id=canonicalId(id);return (id&&MASTER[id]&&!isJunk(MAST
 /* ---------- time helpers ---------- */
 function hm(t){
   if(t==null||t==='')return null;
+  if(t instanceof Date)return t.getHours()*60+t.getMinutes();
   if(typeof t==='number')return Math.round(t*24*60);
   const s=String(t).trim();
   const m=s.match(/(\d{1,2})[:.](\d{2})/); if(m)return (+m[1])*60+(+m[2]);
@@ -479,6 +481,7 @@ function hm(t){
   return null;
 }
 function toHM(min){if(min==null)return'';min=((min%1440)+1440)%1440;return String(Math.floor(min/60)).padStart(2,'0')+':'+String(min%60).padStart(2,'0');}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function pmin(h,m){if(m==null||m==='')return (+h)*60;m=String(m);return (+h)*60+(m.length===1?(+m)*10:(+m));}
 function parseShiftCode(code){
   if(!code)return null;
@@ -489,6 +492,39 @@ function parseShiftCode(code){
   return [pmin(m[1],m[2]),pmin(m[3],m[4])];
 }
 function isOff(code){const c=String(code||'').trim().toUpperCase();return c===''||c==='OFF'||c==='PH';}
+function rangeFromText(...vals){
+  const text=vals.map(v=>String(v||'')).join(' ');
+  const m=text.match(/(\d{1,2}[:.]\d{2})\s*[-–]\s*(\d{1,2}[:.]\d{2})/);
+  if(!m)return null;
+  const start=hm(m[1]),end=hm(m[2]);
+  return start!=null&&end!=null?{start,end:end<start?end+1440:end}:null;
+}
+function durationMinutes(v,item){
+  const n=parseFloat(String(v??'').replace(',','.'));
+  if(Number.isFinite(n))return Math.round(n);
+  const m=String(item||'').match(/(\d{1,3})\s*(?:min|นาที)\b/i);
+  return m?parseInt(m[1],10):0;
+}
+function posServiceRange(row,cT,cDur,cDT,cI,cNote){
+  const item=cI>=0?row[cI]:'';
+  const explicit=rangeFromText(cT>=0?row[cT]:'',cDT>=0?row[cDT]:'',item,cNote>=0?row[cNote]:'');
+  const timeVal=cT>=0&&row[cT]!==''&&row[cT]!=null?row[cT]:(cDT>=0?row[cDT]:'');
+  const start=explicit?explicit.start:hm(timeVal);
+  const dur=durationMinutes(cDur>=0?row[cDur]:null,item);
+  const end=explicit?explicit.end:(start!=null?start+dur:null);
+  return{start,end,dur};
+}
+function serviceWindow(r,compact){
+  if(r.start==null)return'';
+  return toHM(r.start)+(r.end!=null?(compact?'-':' - ')+toHM(r.end):'');
+}
+function rowDateLabel(day){
+  if(day==null||day==='')return'';
+  if(String(day).includes('/'))return String(day);
+  const d=parseInt(day,10),pr=periodRange();
+  if(!Number.isFinite(d)||!pr)return String(day);
+  return String(d).padStart(2,'0')+'/'+String(pr.m).padStart(2,'0')+'/'+pr.y;
+}
 
 /* ---------- parse POS ---------- */
 function normDate(d){
@@ -504,14 +540,14 @@ function parsePOS(wb,fname){
   const arr=XLSX.utils.sheet_to_json(wb.Sheets[sh],{header:1,raw:true,defval:''});
   const head=arr[0].map(h=>String(h).trim());
   const col=n=>head.findIndex(h=>h===n);
-  const cD=col('วันที่'),cT=col('เวลา'),cI=col('รายการ'),cDur=col('เวลาบริการ'),cB=col('รหัสการจอง'),cE1=col('พนักงาน (1)'),cE2=col('พนักงาน (2)');
-  if(cD<0||cT<0||cI<0){$('#infoPos').innerHTML='<span style="color:var(--warn)">ไม่พบคอลัมน์ (วันที่/เวลา/รายการ)</span>';return;}
+  const cD=col('วันที่'),cT=col('เวลา'),cDT=col('วัน-เวลา'),cI=col('รายการ'),cDur=col('เวลาบริการ'),cB=col('รหัสการจอง'),cE1=col('พนักงาน (1)'),cE2=col('พนักงาน (2)'),cNote=col('หมายเหตุการจอง');
+  if(cD<0||(cT<0&&cDT<0)||cI<0){$('#infoPos').innerHTML='<span style="color:var(--warn)">ไม่พบคอลัมน์ (วันที่/เวลา หรือ วัน-เวลา/รายการ)</span>';return;}
   RAW=[];
   for(let i=1;i<arr.length;i++){
-    const r=arr[i],dt=normDate(r[cD]); if(!dt.day)continue;
-    const start=hm(r[cT]),dur=parseInt(r[cDur])||0,item=String(r[cI]||'').trim(),book=String(r[cB]||'').trim();
+    const r=arr[i],dt=normDate(r[cD]||(cDT>=0?r[cDT]:'')); if(!dt.day)continue;
+    const item=String(r[cI]||'').trim(),book=String(cB>=0?r[cB]:'').trim(),rng=posServiceRange(r,cT,cDur,cDT,cI,cNote);
     [r[cE1],cE2>=0?r[cE2]:''].forEach(nm=>{nm=String(nm||'').trim();if(!nm||nm==='0')return;
-      RAW.push({name:nm,dt,start,end:start!=null?start+dur:null,item,book});});
+      RAW.push({name:nm,dt,start:rng.start,end:rng.end,dur:rng.dur,item,book});});
   }
   DATA={};RAW.forEach(x=>{(DATA[x.name]=DATA[x.name]||[]).push(x);});
   const months={};RAW.forEach(x=>{months[x.dt.year+'-'+String(x.dt.mon).padStart(2,'0')]=1;});
@@ -698,8 +734,12 @@ function posByDay(nick){
   const recs=nicks.flatMap(n=>DATA[n]||[]).filter(x=>x.dt.year===pr.y&&x.dt.mon===pr.m&&x.dt.day>=pr.from&&x.dt.day<=pr.to&&x.end!=null);
   const byDay={};recs.forEach(x=>{(byDay[x.dt.day]=byDay[x.dt.day]||[]).push(x);});
   Object.keys(byDay).forEach(day=>{
-    const items=byDay[day],mx=Math.max(...items.map(x=>x.end)),last=items.find(x=>x.end===mx);
-    let g=items.filter(x=>x.book&&last.book&&x.book===last.book);if(!g.length)g=[last];
+    const items=byDay[day],mx=Math.max(...items.map(x=>x.end)),lastSet=items.filter(x=>x.end===mx);
+    const maxStart=Math.max(...lastSet.map(x=>x.start!=null?x.start:-1));
+    const last=lastSet.find(x=>(x.start!=null?x.start:-1)===maxStart)||lastSet[0];
+    let g=items.filter(x=>x.book&&last.book&&x.book===last.book&&x.start===last.start);
+    if(!g.length)g=items.filter(x=>x.book&&last.book&&x.book===last.book&&x.end===last.end);
+    if(!g.length)g=[last];
     g.sort((a,b)=>a.start-b.start);
     out[day]={desc:g.map(x=>x.item).join(' + '),start:Math.min(...g.map(x=>x.start)),end:Math.max(...g.map(x=>x.end))};
   });
@@ -777,9 +817,9 @@ function renderRows(){
     const calcLbl=calcLabel(r);
     tr.innerHTML=
       '<td class="dt"><input value="'+(r.day||'')+'" style="width:42px;text-align:center"></td>'+
-      '<td><textarea rows="1">'+String(r.desc).replace(/</g,'&lt;')+'</textarea><div style="margin-top:2px">'+tag+'</div></td>'+
-      '<td class="tm"><input value="'+(r.start!=null?toHM(r.start)+(r.end!=null?'-'+toHM(r.end):''):'')+'" style="width:116px" placeholder="—"></td>'+
-      '<td class="sh"><input value="'+(r.shift||'')+'" style="width:84px" placeholder="J10-19"></td>'+
+      '<td><textarea rows="1">'+esc(r.desc)+'</textarea><div style="margin-top:2px">'+tag+'</div></td>'+
+      '<td class="tm"><input value="'+serviceWindow(r,true)+'" style="width:116px" placeholder="—"></td>'+
+      '<td class="sh"><input value="'+esc(r.shift||'')+'" style="width:84px" placeholder="J10-19"></td>'+
       '<td class="ot"><input value="'+r.ot+'"><div class="otcalc">'+calcLbl+'</div>'+le+'</td>'+
       '<td><button class="sm danger">✕</button></td>';
     const q=s=>tr.querySelector(s);
@@ -811,16 +851,17 @@ function buildSheet(p,rows){
   const tot=+rows.reduce((s,r)=>s+(parseFloat(r.ot)||0),0).toFixed(2);
   let body='';
   rows.forEach(r=>{
-    const tm=(r.start!=null?toHM(r.start)+(r.end!=null?' - '+toHM(r.end):''):'');
-    const desc=[r.desc,tm,r.shift?'('+r.shift+')':''].filter(Boolean).join('  ');
-    body+='<tr><td class="c">'+(r.day||'')+'</td><td class="desc">'+String(desc).replace(/</g,'&lt;')+'</td><td class="c">'+(r.ot||'')+'</td><td></td></tr>';
+    const tm=serviceWindow(r,false);
+    const dateText=rowDateLabel(r.day)+(tm?' ('+tm+')':'');
+    const desc=[r.desc,r.shift?'('+r.shift+')':''].filter(Boolean).join('  ');
+    body+='<tr><td class="c date">'+esc(dateText)+'</td><td class="desc">'+esc(desc)+'</td><td class="c">'+(r.ot||'')+'</td><td></td></tr>';
   });
   for(let k=rows.length;k<16;k++)body+='<tr><td class="c">&nbsp;</td><td></td><td></td><td></td></tr>';
   return `<div class="sheet">
     <div class="title">ใบขอเบิกค่าล่วงเวลา</div>
-    <div class="meta"><div>ชื่อ-นามสกุล : <span class="v">${p.label}</span></div><div>ตำแหน่ง : <span class="v">${positionFor(p.id)}</span></div></div>
+    <div class="meta"><div>ชื่อ-นามสกุล : <span class="v">${esc(p.label)}</span></div><div>ตำแหน่ง : <span class="v">${esc(positionFor(p.id))}</span></div></div>
     <div class="period">รอบวันที่ ${periodLabel()}${p.old?' · พนักงานชุดเก่า (OT ขั้นต่ำ 1 ชม./วันทำงาน)':''}</div>
-    <table class="form"><thead><tr><th style="width:60px">วันที่</th><th>อธิบายงานที่ทำล่วงเวลา</th><th style="width:80px">จำนวนชั่วโมง</th><th style="width:90px">ผู้อนุมัติ</th></tr></thead>
+    <table class="form"><thead><tr><th style="width:135px">วันที่/เวลาบริการจริง</th><th>อธิบายงานที่ทำล่วงเวลา</th><th style="width:80px">จำนวนชั่วโมง</th><th style="width:90px">ผู้อนุมัติ</th></tr></thead>
     <tbody>${body}<tr class="sumrow"><td colspan="2">รวม</td><td class="hh">${tot}</td><td>ชั่วโมง</td></tr></tbody></table>
     <div class="sign"><div>ลงชื่อ <span class="line"></span> ผู้ขออนุมัติ<br>( <span class="line" style="width:120px"></span> )<br><span style="font-size:12px">พนักงาน — เซ็นรับทราบ</span></div>
     <div>ลงชื่อ <span class="line"></span> อนุมัติ<br>( <span class="line" style="width:120px"></span> )<br><span style="font-size:12px">ผู้จัดการ</span></div></div>
